@@ -17,6 +17,9 @@ export default function Dashboard() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [filters, setFilters] = useState({
     status: '',
     priority: '',
@@ -24,28 +27,45 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1); // Reset page on new search
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
     fetchData();
-    if (user?.role === 'admin') {
+    if (user?.role === 'admin' && activeTab === 'users') {
       fetchAdminUsers();
     }
-  }, [activeTab, user, filters]);
+  }, [activeTab, user, filters, debouncedSearch, page]);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [bugsRes, tasksRes, usersRes] = await Promise.all([
-        api.get('/bugs', { params: { ...filters, search: searchQuery } }),
-        api.get('/tasks', { params: { ...filters, search: searchQuery } }),
-        api.get('/users')
-      ]);
-      setBugs(bugsRes.data.data || []);
-      setTasks(tasksRes.data.data || []);
+      const usersRes = await api.get('/users');
       setUsers(Array.isArray(usersRes.data) ? usersRes.data : usersRes.data.data || []);
+      
+      if (activeTab === 'bugs') {
+        const bugsRes = await api.get('/bugs', { params: { ...filters, search: debouncedSearch, page } });
+        setBugs(bugsRes.data.data || []);
+        setTotalPages(bugsRes.data.last_page || 1);
+      } else if (activeTab === 'tasks') {
+        const tasksRes = await api.get('/tasks', { params: { ...filters, search: debouncedSearch, page } });
+        setTasks(tasksRes.data.data || []);
+        setTotalPages(tasksRes.data.last_page || 1);
+      }
     } catch (err) {
       console.error('Failed to fetch data', err);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFilterChange = (f, val) => {
+    setFilters({ ...filters, [f]: val });
+    setPage(1);
   };
 
   const fetchAdminUsers = async () => {
@@ -134,7 +154,7 @@ export default function Dashboard() {
           <nav className="space-y-4">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 mb-6 ml-4">Command Terminal</p>
             <button 
-              onClick={() => setActiveTab('bugs')}
+              onClick={() => { setActiveTab('bugs'); setPage(1); }}
               className={`w-full flex items-center gap-4 px-6 py-5 rounded-2xl transition-all duration-500 group relative overflow-hidden ${activeTab === 'bugs' ? 'bg-indigo-500 text-white shadow-2xl shadow-indigo-500/40' : 'text-slate-500 hover:bg-white/5 hover:text-white'}`}
             >
               <Bug className={`w-5 h-5 relative z-10 ${activeTab === 'bugs' ? 'text-white' : 'group-hover:text-indigo-400 transition-colors'}`} />
@@ -142,7 +162,7 @@ export default function Dashboard() {
               {activeTab === 'bugs' && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>}
             </button>
             <button 
-              onClick={() => setActiveTab('tasks')}
+              onClick={() => { setActiveTab('tasks'); setPage(1); }}
               className={`w-full flex items-center gap-4 px-6 py-5 rounded-2xl transition-all duration-500 group relative overflow-hidden ${activeTab === 'tasks' ? 'bg-indigo-500 text-white shadow-2xl shadow-indigo-500/40' : 'text-slate-500 hover:bg-white/5 hover:text-white'}`}
             >
               <CheckSquare className={`w-5 h-5 relative z-10 ${activeTab === 'tasks' ? 'text-white' : 'group-hover:text-indigo-400 transition-colors'}`} />
@@ -151,7 +171,7 @@ export default function Dashboard() {
             </button>
             {user?.role === 'admin' && (
               <button 
-                onClick={() => setActiveTab('users')}
+                onClick={() => { setActiveTab('users'); setPage(1); }}
                 className={`w-full flex items-center gap-4 px-6 py-5 rounded-2xl transition-all duration-500 group relative overflow-hidden ${activeTab === 'users' ? 'bg-indigo-500 text-white shadow-2xl shadow-indigo-500/40' : 'text-slate-500 hover:bg-white/5 hover:text-white'}`}
               >
                 <Users className={`w-5 h-5 relative z-10 ${activeTab === 'users' ? 'text-white' : 'group-hover:text-indigo-400 transition-colors'}`} />
@@ -232,13 +252,13 @@ export default function Dashboard() {
             <div className="flex items-center gap-6">
               {activeTab !== 'users' && (
                 <div className="flex items-center gap-4">
-                  {['status', 'priority', ...(activeTab === 'bugs' ? ['severity'] : [])].map((f) => (
+                  {['status', 'priority', 'severity'].map((f) => (
                     <div key={f} className="glass-panel bg-white/[0.02] border border-white/5 rounded-2xl px-6 py-4 flex items-center gap-3 hover:border-indigo-500/30 transition-all cursor-pointer">
                       <Filter className="w-4 h-4 text-indigo-400" />
                       <select 
                         className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest text-slate-400 focus:ring-0 p-0 pr-8 cursor-pointer hover:text-white transition-colors"
                         value={filters[f]}
-                        onChange={(e) => setFilters({...filters, [f]: e.target.value})}
+                        onChange={(e) => handleFilterChange(f, e.target.value)}
                       >
                         <option value="" className="bg-[#0a0a0a] text-white">All {f.toUpperCase()}</option>
                         {f === 'status' ? (
@@ -410,6 +430,29 @@ export default function Dashboard() {
               ))}
             </div>
           )}
+
+          {/* Pagination Controls */}
+          {activeTab !== 'users' && !isLoading && filteredItems.length > 0 && totalPages > 1 && (
+            <div className="flex items-center justify-center gap-6 mt-16">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              >
+                Previous
+              </button>
+              <div className="text-slate-400 font-bold text-sm">
+                Page <span className="text-white">{page}</span> of <span className="text-white">{totalPages}</span>
+              </div>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </main>
 
@@ -420,6 +463,7 @@ export default function Dashboard() {
         bug={selectedItem}
         onSave={fetchData}
         users={users}
+        currentUser={user}
       />
       <TaskModal 
         isOpen={isTaskModalOpen}
@@ -427,6 +471,7 @@ export default function Dashboard() {
         task={selectedItem}
         onSave={fetchData}
         users={users}
+        currentUser={user}
       />
     </div>
   );

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Trash2 } from 'lucide-react';
 import api from '../services/api';
 
-export default function TaskModal({ isOpen, onClose, task, onSave, users }) {
+export default function TaskModal({ isOpen, onClose, task, onSave, users, currentUser }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     priority: 'medium',
+    severity: 'minor',
     status: 'open',
     category: '',
     project: '',
@@ -22,6 +23,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users }) {
         title: task.title,
         description: task.description,
         priority: task.priority,
+        severity: task.severity || 'minor',
         status: task.status,
         category: task.category || '',
         project: task.project || '',
@@ -33,6 +35,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users }) {
         title: '',
         description: '',
         priority: 'medium',
+        severity: 'minor',
         status: 'open',
         category: '',
         project: '',
@@ -67,6 +70,22 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users }) {
       setIsSubmitting(false);
     }
   };
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to permanently delete this task?')) return;
+    setIsSubmitting(true);
+    try {
+      await api.delete(`/tasks/${task.id}`);
+      onSave();
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete task');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const canDelete = task && currentUser && (currentUser.role === 'admin' || currentUser.id === task.created_by);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -151,6 +170,20 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users }) {
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Severity</label>
+                <select
+                  className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  value={formData.severity}
+                  onChange={e => setFormData({...formData, severity: e.target.value})}
+                >
+                  <option value="minor">Minor</option>
+                  <option value="major">Major</option>
+                  <option value="critical">Critical</option>
+                  <option value="blocker">Blocker</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Deadline</label>
                 <input
                   type="date"
@@ -194,22 +227,37 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users }) {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 rounded-xl font-medium text-slate-300 hover:bg-slate-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-70"
-              >
-                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {task ? 'Update Task' : 'Create Task'}
-              </button>
+            <div className="flex justify-between pt-4">
+              <div>
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={isSubmitting}
+                    className="px-5 py-2.5 rounded-xl font-medium text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 py-2.5 rounded-xl font-medium text-slate-300 hover:bg-slate-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-70"
+                >
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {task ? 'Update Task' : 'Create Task'}
+                </button>
+              </div>
             </div>
           </form>
         </div>

@@ -18,7 +18,7 @@ class BugController extends Controller
         $query = Bug::with(['creator:id,name', 'assignee:id,name']);
 
         $user = $request->user();
-        if ($user && $user->role === 'developer') {
+        if ($user && $user->role === 'dev') {
             $query->where(function($q) use ($user) {
                 $q->where('assigned_to', $user->id)
                   ->orWhere('created_by', $user->id);
@@ -47,6 +47,13 @@ class BugController extends Controller
 
         if ($request->filled('project')) {
             $query->where('project', 'like', '%' . $request->project . '%');
+        }
+
+        if ($request->filled('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%');
+            });
         }
 
         $bugs = $query->latest()->paginate(15);
@@ -93,20 +100,29 @@ class BugController extends Controller
      */
     public function update(Request $request, Bug $bug): JsonResponse
     {
-        $validated = $request->validate([
-            'title'       => 'sometimes|string|max:255',
-            'description' => 'sometimes|string',
-            'status'      => ['sometimes', Rule::in(['reported', 'in_progress', 'resolved', 'closed'])],
-            'priority'    => ['sometimes', Rule::in(['low', 'medium', 'high', 'urgent'])],
-            'severity'    => ['sometimes', Rule::in(['minor', 'major', 'critical', 'blocker'])],
-            'assigned_to' => 'nullable|exists:users,id',
-            'category'    => 'sometimes|string|max:100',
-            'project'     => 'sometimes|string|max:100',
-        ]);
-
         $user = $request->user();
-        if ($user->role !== 'admin' && $user->role !== 'manager' && $user->id !== $bug->created_by && $user->id !== $bug->assigned_to) {
+        $isFullEditor = $user->role === 'admin' || $user->role === 'manager' || $user->id === $bug->created_by;
+        $isAssignee = $user->id === $bug->assigned_to;
+
+        if (!$isFullEditor && !$isAssignee) {
             return response()->json(['message' => 'Unauthorized. Only admins, managers, creators, or assignees can update this bug.'], 403);
+        }
+
+        if (!$isFullEditor && $isAssignee) {
+            $validated = $request->validate([
+                'status' => ['sometimes', Rule::in(['reported', 'in_progress', 'resolved', 'closed'])],
+            ]);
+        } else {
+            $validated = $request->validate([
+                'title'       => 'sometimes|string|max:255',
+                'description' => 'sometimes|string',
+                'status'      => ['sometimes', Rule::in(['reported', 'in_progress', 'resolved', 'closed'])],
+                'priority'    => ['sometimes', Rule::in(['low', 'medium', 'high', 'urgent'])],
+                'severity'    => ['sometimes', Rule::in(['minor', 'major', 'critical', 'blocker'])],
+                'assigned_to' => 'nullable|exists:users,id',
+                'category'    => 'sometimes|string|max:100',
+                'project'     => 'sometimes|string|max:100',
+            ]);
         }
 
         $bug->update($validated);
@@ -118,8 +134,13 @@ class BugController extends Controller
     /**
      * Delete a bug report.
      */
-    public function destroy(Bug $bug): JsonResponse
+    public function destroy(Request $request, Bug $bug): JsonResponse
     {
+        $user = $request->user();
+        if ($user->role !== 'admin' && $user->id !== $bug->created_by) {
+            return response()->json(['message' => 'Unauthorized. Only admins or the creator can delete this bug.'], 403);
+        }
+
         $bug->delete();
 
         return response()->json(['message' => 'Bug deleted successfully.']);

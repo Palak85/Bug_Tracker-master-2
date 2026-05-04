@@ -17,7 +17,7 @@ class TaskController extends Controller
         $query = Task::with(['creator:id,name', 'assignee:id,name']);
 
         $user = $request->user();
-        if ($user && $user->role === 'developer') {
+        if ($user && $user->role === 'dev') {
             $query->where(function($q) use ($user) {
                 $q->where('assigned_to', $user->id)
                   ->orWhere('created_by', $user->id);
@@ -32,6 +32,10 @@ class TaskController extends Controller
             $query->where('priority', $request->priority);
         }
 
+        if ($request->filled('severity')) {
+            $query->where('severity', $request->severity);
+        }
+
         if ($request->filled('assigned_to')) {
             $query->where('assigned_to', $request->assigned_to);
         }
@@ -42,6 +46,13 @@ class TaskController extends Controller
 
         if ($request->filled('project')) {
             $query->where('project', 'like', '%' . $request->project . '%');
+        }
+
+        if ($request->filled('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%');
+            });
         }
 
         $tasks = $query->latest()->paginate(15);
@@ -58,6 +69,7 @@ class TaskController extends Controller
             'title'       => 'required|string|max:255',
             'description' => 'required|string',
             'priority'    => ['sometimes', Rule::in(['low', 'medium', 'high', 'urgent'])],
+            'severity'    => ['sometimes', Rule::in(['minor', 'major', 'critical', 'blocker'])],
             'deadline'    => 'nullable|date',
             'assigned_to' => 'nullable|exists:users,id',
             'category'    => 'nullable|string|max:100',
@@ -88,20 +100,30 @@ class TaskController extends Controller
      */
     public function update(Request $request, Task $task): JsonResponse
     {
-        $validated = $request->validate([
-            'title'       => 'sometimes|string|max:255',
-            'description' => 'sometimes|string',
-            'status'      => ['sometimes', Rule::in(['open', 'in_progress', 'resolved'])],
-            'priority'    => ['sometimes', Rule::in(['low', 'medium', 'high', 'urgent'])],
-            'deadline'    => 'nullable|date',
-            'assigned_to' => 'nullable|exists:users,id',
-            'category'    => 'sometimes|string|max:100',
-            'project'     => 'sometimes|string|max:100',
-        ]);
-
         $user = $request->user();
-        if ($user->role !== 'admin' && $user->role !== 'manager' && $user->id !== $task->created_by && $user->id !== $task->assigned_to) {
+        $isFullEditor = $user->role === 'admin' || $user->role === 'manager' || $user->id === $task->created_by;
+        $isAssignee = $user->id === $task->assigned_to;
+
+        if (!$isFullEditor && !$isAssignee) {
             return response()->json(['message' => 'Unauthorized. Only admins, managers, creators, or assignees can update this task.'], 403);
+        }
+
+        if (!$isFullEditor && $isAssignee) {
+            $validated = $request->validate([
+                'status' => ['sometimes', Rule::in(['open', 'in_progress', 'resolved'])],
+            ]);
+        } else {
+            $validated = $request->validate([
+                'title'       => 'sometimes|string|max:255',
+                'description' => 'sometimes|string',
+                'status'      => ['sometimes', Rule::in(['open', 'in_progress', 'resolved'])],
+                'priority'    => ['sometimes', Rule::in(['low', 'medium', 'high', 'urgent'])],
+                'severity'    => ['sometimes', Rule::in(['minor', 'major', 'critical', 'blocker'])],
+                'deadline'    => 'nullable|date',
+                'assigned_to' => 'nullable|exists:users,id',
+                'category'    => 'sometimes|string|max:100',
+                'project'     => 'sometimes|string|max:100',
+            ]);
         }
 
         $task->update($validated);
@@ -113,8 +135,13 @@ class TaskController extends Controller
     /**
      * Delete a task.
      */
-    public function destroy(Task $task): JsonResponse
+    public function destroy(Request $request, Task $task): JsonResponse
     {
+        $user = $request->user();
+        if ($user->role !== 'admin' && $user->id !== $task->created_by) {
+            return response()->json(['message' => 'Unauthorized. Only admins or the creator can delete this task.'], 403);
+        }
+
         $task->delete();
 
         return response()->json(['message' => 'Task deleted successfully.']);
