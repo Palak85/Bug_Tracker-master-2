@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2, Trash2, AlertCircle } from 'lucide-react';
 import api from '../services/api';
+import CommentsSection from './CommentsSection';
 
 /* Shared field styles — match login page inputs */
 const labelCls  = 'block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5';
@@ -202,6 +203,12 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, currentU
               </div>
             </div>
           </form>
+
+          {bug && (
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <CommentsSection bugId={bug.id} />
+            </div>
+          )}
         </div>
       </div>
     </div>

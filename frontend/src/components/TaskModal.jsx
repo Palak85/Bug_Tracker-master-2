@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2, Trash2, AlertCircle } from 'lucide-react';
 import api from '../services/api';
+import CommentsSection from './CommentsSection';
 
 const labelCls  = 'block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5';
 const inputCls  = 'w-full bg-[#f3f5f9] border border-gray-200 rounded-2xl px-4 py-3 text-gray-700 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed';
@@ -196,6 +197,12 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, curren
               </div>
             </div>
           </form>
+
+          {task && (
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <CommentsSection taskId={task.id} />
+            </div>
+          )}
         </div>
       </div>
     </div>

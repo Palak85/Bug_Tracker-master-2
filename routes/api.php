@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BugController;
+use App\Http\Controllers\Api\CommentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +23,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::apiResource('bugs', BugController::class);
     Route::apiResource('tasks', \App\Http\Controllers\TaskController::class);
+    Route::apiResource('comments', CommentController::class)->only(['index', 'store', 'destroy']);
     
     // Admin Routes
     Route::get('/admin/users', [\App\Http\Controllers\Api\AdminController::class, 'index']);
