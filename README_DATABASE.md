@@ -1,17 +1,31 @@
 # Database Schema Documentation: Bug Tracker
 
-This project uses a relational database to manage users, bug reports, tasks, and team collaboration. Below is the detailed schema for each table.
+This project uses a relational database to manage users, projects, bugs, tasks, and team collaboration.
 
 ---
 
-## 1. `users` Table
+## 1. `projects` Table
+Stores high-level projects or product versions.
+
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `BigInt (PK)` | Primary Key. |
+| `name` | `String` | Project name. |
+| `description` | `Text` | Project details/goals. |
+| `status` | `Enum` | `active` or `archived`. |
+| `manager_id` | `BigInt (FK)` | Links to `users.id` (Project Lead). |
+| `timestamps` | `Datetime` | `created_at` and `updated_at`. |
+
+---
+
+## 2. `users` Table
 Stores authentication and profile information for all team members.
 
 | Column | Type | Description |
 | :--- | :--- | :--- |
 | `id` | `BigInt (PK)` | Primary Key. |
 | `name` | `String` | Full name of the user. |
-| `email` | `String` | Unique email address (used for login). |
+| `email` | `String` | Unique email address. |
 | `password` | `String` | Hashed password. |
 | `role` | `Enum` | `admin`, `manager`, or `dev`. |
 | `is_approved` | `Boolean` | Whether the user has been verified by an admin. |
@@ -20,16 +34,16 @@ Stores authentication and profile information for all team members.
 
 ---
 
-## 2. `bugs` Table
+## 3. `bugs` Table
 Stores all reported software bugs.
 
 | Column | Type | Description |
 | :--- | :--- | :--- |
 | `id` | `BigInt (PK)` | Primary Key. |
+| `project_id` | `BigInt (FK)` | Links to `projects.id` (The specific project). |
 | `title` | `String` | Brief summary of the bug. |
-| `description` | `Text` | Detailed steps to reproduce and behavior. |
+| `description` | `Text` | Detailed steps to reproduce. |
 | `category` | `String` | e.g., UI, Backend, Database. |
-| `project` | `String` | e.g., Mobile App, Web Portal. |
 | `status` | `Enum` | `reported`, `in_progress`, `resolved`, `closed`. |
 | `priority` | `Enum` | `low`, `medium`, `high`, `urgent`. |
 | `severity` | `Enum` | `minor`, `major`, `critical`, `blocker`. |
@@ -39,16 +53,16 @@ Stores all reported software bugs.
 
 ---
 
-## 3. `tasks` Table
+## 4. `tasks` Table
 Stores general project tasks and sprint items.
 
 | Column | Type | Description |
 | :--- | :--- | :--- |
 | `id` | `BigInt (PK)` | Primary Key. |
+| `project_id` | `BigInt (FK)` | Links to `projects.id` (The specific project). |
 | `title` | `String` | Task name. |
 | `description` | `Text` | Task details. |
 | `category` | `String` | e.g., Feature, Maintenance. |
-| `project` | `String` | e.g., API, Frontend. |
 | `status` | `Enum` | `open`, `in_progress`, `resolved`. |
 | `priority` | `Enum` | `low`, `medium`, `high`, `urgent`. |
 | `severity` | `Enum` | `minor`, `major`, `critical`, `blocker`. |
@@ -59,7 +73,7 @@ Stores general project tasks and sprint items.
 
 ---
 
-## 4. `comments` Table
+## 5. `comments` Table
 Stores communication logs for both bugs and tasks.
 
 | Column | Type | Description |
@@ -75,6 +89,8 @@ Stores communication logs for both bugs and tasks.
 
 ## Relationships Summary
 
+- **Projects ↔ Bugs/Tasks**: One project contains many bugs and tasks.
+- **Users ↔ Projects**: One user (Manager) can lead many projects.
 - **Users ↔ Bugs/Tasks**: One user can report many bugs and be assigned to many tasks.
 - **Bugs ↔ Comments**: One bug can have many comments.
 - **Tasks ↔ Comments**: One task can have many comments.
@@ -82,39 +98,20 @@ Stores communication logs for both bugs and tasks.
 
 ---
 
----
-
 ## Sample Test Data
 
-You can use the following data to test the different roles and features of the application.
-
 ### 1. Test Users
-| Name | Email | Password | Role | Purpose |
-| :--- | :--- | :--- | :--- | :--- |
-| **Admin Alice** | `admin@example.com` | `password` | `admin` | System management & approvals. |
-| **Manager Mike** | `manager@example.com` | `password` | `manager` | Creating tasks & assigning developers. |
-| **Dev Dave** | `dave@example.com` | `password` | `dev` | Reporting bugs & resolving tasks. |
+| Name | Email | Password | Role |
+| :--- | :--- | :--- | :--- |
+| **Admin Alice** | `admin@example.com` | `password` | `admin` |
+| **Manager Mike** | `manager@example.com` | `password` | `manager` |
+| **Dev Dave** | `dave@example.com` | `password` | `dev` |
 
-### 2. Sample Bugs
-| Title | Category | Project | Severity | Priority | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Login Timeout** | Auth | Web Portal | **Critical** | **Urgent** | `reported` |
-| **Icon misaligned** | UI | Mobile App | `minor` | `low` | `in_progress` |
-| **Data not saving** | Database | API | **Blocker** | **Urgent** | `reported` |
-
-### 3. Sample Tasks
-| Title | Category | Project | Priority | Deadline | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Design Logo** | Design | Marketing | `medium` | `2026-06-01` | `open` |
-| **Write API Docs** | Documentation | API | `high` | `2026-05-20` | `in_progress` |
-| **Setup Server** | DevOps | Infra | **Urgent** | `2026-05-10` | `resolved` |
-
-### 4. Sample Comments
-| User | Item | Content |
-| :--- | :--- | :--- |
-| **Dave** | Bug: Login Timeout | "I've started investigating the logs for this." |
-| **Alice** | Bug: Login Timeout | "Please check the Redis connection settings." |
-| **Mike** | Task: Design Logo | "The client requested a purple color palette." |
+### 2. Sample Projects
+| Name | Description | Status | Manager |
+| :--- | :--- | :--- | :--- |
+| **Bug Tracker v2** | Refining the internal issue tracking system. | `active` | Alice |
+| **Mobile App** | Development of the cross-platform mobile client. | `active` | Mike |
 
 ---
 

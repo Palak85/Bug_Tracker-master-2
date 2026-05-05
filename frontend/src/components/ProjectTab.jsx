@@ -1,0 +1,159 @@
+import { useState, useEffect } from 'react';
+import api from '../services/api';
+import { Plus, Layout, User, Clock, Loader2, AlertCircle, Trash2 } from 'lucide-react';
+
+export default function ProjectTab({ onUpdate }) {
+  const [projects, setProjects] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({ name: '', description: '', status: 'active', manager_id: '' });
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [pRes, uRes] = await Promise.all([
+        api.get('/projects'),
+        api.get('/users')
+      ]);
+      setProjects(pRes.data);
+      setUsers(uRes.data);
+    } catch (err) {
+      console.error('Failed to fetch project data', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await api.post('/projects', formData);
+      setIsModalOpen(false);
+      setFormData({ name: '', description: '', status: 'active', manager_id: '' });
+      fetchData();
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create project');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure? This will not delete bugs but will remove their project link.')) return;
+    try {
+      await api.delete(`/projects/${id}`);
+      fetchData();
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      alert('Failed to delete project');
+    }
+  };
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-purple-600" /></div>;
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-bold text-gray-800">Projects Management</h3>
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-purple-200 hover:scale-[1.03] transition-all"
+        >
+          <Plus size={18} /> New Project
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {projects.length === 0 ? (
+          <div className="col-span-full py-20 text-center bg-white rounded-[30px] border-2 border-dashed border-gray-100">
+            <Layout className="mx-auto text-gray-200 mb-4" size={48} />
+            <p className="text-gray-400">No projects created yet. Start by adding one!</p>
+          </div>
+        ) : (
+          projects.map(project => (
+            <div key={project.id} className="bg-white p-6 rounded-[30px] shadow-sm border border-gray-100 hover:shadow-md transition-all group">
+              <div className="flex justify-between items-start mb-4">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+                  <Layout size={20} />
+                </div>
+                <div className="flex gap-2">
+                  <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
+                    project.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {project.status}
+                  </span>
+                  <button onClick={() => handleDelete(project.id)} className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-rose-500 transition-all">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+              <h4 className="font-bold text-gray-800 mb-2">{project.name}</h4>
+              <p className="text-sm text-gray-400 line-clamp-2 mb-6">{project.description || 'No description provided.'}</p>
+              
+              <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] text-indigo-600 font-bold">
+                    {project.manager?.name?.charAt(0) || 'U'}
+                  </div>
+                  <span className="text-xs text-gray-500 font-medium">{project.manager?.name || 'Unassigned'}</span>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] text-gray-300">
+                   <Clock size={12} />
+                   {new Date(project.created_at).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Create Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-800/30 backdrop-blur-md" onClick={() => setIsModalOpen(false)} />
+          <div className="relative bg-white rounded-[30px] w-full max-w-md p-8 shadow-2xl animate-in zoom-in duration-300">
+            <h2 className="text-xl font-bold text-gray-800 mb-6">Create New Project</h2>
+            {error && <div className="bg-rose-50 text-rose-500 p-3 rounded-xl mb-4 text-xs flex items-center gap-2"><AlertCircle size={14}/>{error}</div>}
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Project Name</label>
+                <input required className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-400" 
+                  value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Mobile App v1.0" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Description</label>
+                <textarea rows={3} className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-400 resize-none" 
+                  value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Project goals and scope..." />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Project Lead</label>
+                <select className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-400 cursor-pointer"
+                  value={formData.manager_id} onChange={e => setFormData({...formData, manager_id: e.target.value})}>
+                  <option value="">Select Manager</option>
+                  {users.filter(u => u.role !== 'dev').map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 text-sm font-bold text-gray-400 hover:text-gray-600">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="flex-1 bg-gradient-to-r from-purple-500 to-indigo-600 text-white py-3 rounded-2xl text-sm font-bold shadow-lg flex items-center justify-center gap-2">
+                  {isSubmitting && <Loader2 className="animate-spin" size={16} />} Create Project
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

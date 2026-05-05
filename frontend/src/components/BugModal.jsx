@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2, Trash2, AlertCircle } from 'lucide-react';
+import { X, Loader2, Trash2, AlertCircle, Paperclip, ExternalLink } from 'lucide-react';
 import api from '../services/api';
 import CommentsSection from './CommentsSection';
 
@@ -8,11 +8,12 @@ const labelCls  = 'block text-xs font-bold uppercase tracking-widest text-gray-4
 const inputCls  = 'w-full bg-[#f3f5f9] border border-gray-200 rounded-2xl px-4 py-3 text-gray-700 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed';
 const selectCls = 'w-full bg-[#f3f5f9] border border-gray-200 rounded-2xl px-4 py-3 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
 
-export default function BugModal({ isOpen, onClose, bug, onSave, users, currentUser }) {
+export default function BugModal({ isOpen, onClose, bug, onSave, users, projects, currentUser }) {
   const [formData, setFormData] = useState({
     title: '', description: '', priority: 'medium', severity: 'major',
-    status: 'reported', category: '', project: '', assigned_to: ''
+    status: 'reported', category: '', project_id: '', assigned_to: ''
   });
+  const [attachment, setAttachment] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -21,11 +22,12 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, currentU
       setFormData({
         title: bug.title, description: bug.description, priority: bug.priority,
         severity: bug.severity, status: bug.status, category: bug.category || '',
-        project: bug.project || '', assigned_to: bug.assigned_to || ''
+        project_id: bug.project_id || '', assigned_to: bug.assigned_to || ''
       });
     } else {
-      setFormData({ title: '', description: '', priority: 'medium', severity: 'major', status: 'reported', category: '', project: '', assigned_to: '' });
+      setFormData({ title: '', description: '', priority: 'medium', severity: 'major', status: 'reported', category: '', project_id: '', assigned_to: '' });
     }
+    setAttachment(null);
   }, [bug, isOpen]);
 
   if (!isOpen) return null;
@@ -34,14 +36,38 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, currentU
     e.preventDefault();
     setIsSubmitting(true);
     setError('');
+    
     try {
-      const data = { ...formData };
-      if (!data.assigned_to) data.assigned_to = null;
-      bug ? await api.put(`/bugs/${bug.id}`, data) : await api.post('/bugs', data);
-      onSave(); onClose();
+      const form = new FormData();
+      Object.keys(formData).forEach(key => {
+        if (formData[key] !== null && formData[key] !== '') {
+          form.append(key, formData[key]);
+        }
+      });
+      
+      if (attachment) {
+        form.append('attachment', attachment);
+      }
+
+      if (bug) {
+        // Laravel PUT with files needs _method override
+        form.append('_method', 'PUT');
+        await api.post(`/bugs/${bug.id}`, form, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } else {
+        await api.post('/bugs', form, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      }
+      
+      onSave(); 
+      onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save bug');
-    } finally { setIsSubmitting(false); }
+    } finally { 
+      setIsSubmitting(false); 
+    }
   };
 
   const handleDelete = async () => {
@@ -56,32 +82,24 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, currentU
   const canEditAll = !bug || (currentUser && (currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.id === bug.created_by));
   const set = (key, val) => setFormData({ ...formData, [key]: val });
 
-  // Assignable users filtered by role:
-  // admin   → everyone
-  // manager → exclude admins and themselves
-  // dev     → no assignment (field hidden)
   const assignableUsers = !currentUser ? [] :
     currentUser.role === 'admin'
       ? (users || [])
       : currentUser.role === 'manager'
         ? (users || []).filter(u => u.role !== 'admin' && u.id !== currentUser.id)
-        : []; // dev — hidden
+        : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-gray-800/30 backdrop-blur-md" onClick={onClose} />
-
-      {/* Modal card — white like login */}
+      
       <div className="relative bg-white rounded-[30px] w-full max-w-2xl shadow-[0_25px_60px_rgba(0,0,0,0.2)] max-h-[90vh] overflow-y-auto">
-
-        {/* Header — purple gradient strip */}
         <div className="sticky top-0 z-10 bg-white rounded-t-[30px] flex justify-between items-center px-8 py-6 border-b border-gray-100">
           <div>
             <h2 className="text-xl font-bold text-gray-800">
               {bug ? (canEditAll ? 'Edit Bug Report' : 'Update Status') : 'New Bug Report'}
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">Fill in the details below</p>
+            <p className="text-xs text-gray-400 mt-0.5">#{bug?.id || 'New'}</p>
           </div>
           <button onClick={onClose} className="w-9 h-9 rounded-full bg-[#f3f5f9] flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-all">
             <X className="w-4 h-4" />
@@ -94,14 +112,8 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, currentU
               <AlertCircle size={14} /> {error}
             </div>
           )}
-          {!canEditAll && bug && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-600 px-4 py-3 rounded-2xl mb-5 text-sm">
-              You can only update the status of this bug.
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Title */}
             <div>
               <label className={labelCls}>Title</label>
               <input type="text" required disabled={!canEditAll} className={inputCls}
@@ -109,31 +121,30 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, currentU
                 value={formData.title} onChange={e => set('title', e.target.value)} />
             </div>
 
-            {/* Description */}
             <div>
               <label className={labelCls}>Description</label>
               <textarea required rows={4} disabled={!canEditAll} className={`${inputCls} resize-none`}
-                placeholder="Steps to reproduce, expected vs actual behavior..."
+                placeholder="Steps to reproduce..."
                 value={formData.description} onChange={e => set('description', e.target.value)} />
             </div>
 
-            {/* Category + Project */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelCls}>Category / Module</label>
-                <input type="text" disabled={!canEditAll} className={inputCls}
-                  placeholder="e.g. Authentication, UI"
-                  value={formData.category} onChange={e => set('category', e.target.value)} />
+                <label className={labelCls}>Project</label>
+                <select disabled={!canEditAll} className={selectCls}
+                  value={formData.project_id} onChange={e => set('project_id', e.target.value)}>
+                  <option value="">Select Project</option>
+                  {(projects || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
               </div>
               <div>
-                <label className={labelCls}>Project / Product</label>
+                <label className={labelCls}>Category</label>
                 <input type="text" disabled={!canEditAll} className={inputCls}
-                  placeholder="e.g. Mobile App, Admin Panel"
-                  value={formData.project} onChange={e => set('project', e.target.value)} />
+                  placeholder="e.g. UI, API"
+                  value={formData.category} onChange={e => set('category', e.target.value)} />
               </div>
             </div>
 
-            {/* Priority + Severity + Status + Assign */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Priority</label>
@@ -166,23 +177,42 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, currentU
                   </select>
                 </div>
               )}
-              {/* Assign To — hidden for developers */}
               {currentUser?.role !== 'dev' && (
                 <div>
                   <label className={labelCls}>Assign To</label>
                   <select disabled={!canEditAll} className={selectCls}
                     value={formData.assigned_to} onChange={e => set('assigned_to', e.target.value)}>
                     <option value="">Unassigned</option>
-                    {assignableUsers.length > 0
-                      ? assignableUsers.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)
-                      : <option disabled>No eligible team members</option>
-                    }
+                    {assignableUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                   </select>
                 </div>
               )}
             </div>
 
-            {/* Actions */}
+            {/* File Attachment */}
+            <div>
+              <label className={labelCls}>Attachment (Image/PDF)</label>
+              <div className="flex items-center gap-4">
+                <label className="flex-1 cursor-pointer">
+                  <div className="flex items-center gap-2 bg-[#f3f5f9] border border-gray-200 border-dashed rounded-2xl px-4 py-3 text-gray-500 text-sm hover:border-purple-400 transition-all">
+                    <Paperclip size={16} />
+                    <span>{attachment ? attachment.name : 'Click to upload screenshot...'}</span>
+                  </div>
+                  <input type="file" className="hidden" onChange={e => setAttachment(e.target.files[0])} />
+                </label>
+                {bug?.attachment_path && (
+                  <a 
+                    href={`${import.meta.env.VITE_API_URL}/storage/${bug.attachment_path}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="p-3 rounded-2xl bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all shadow-sm flex items-center gap-2 text-xs font-bold"
+                  >
+                    <ExternalLink size={14} /> View
+                  </a>
+                )}
+              </div>
+            </div>
+
             <div className="flex justify-between items-center pt-4 border-t border-gray-100 mt-2">
               {canDelete ? (
                 <button type="button" onClick={handleDelete} disabled={isSubmitting}

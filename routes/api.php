@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BugController;
 use App\Http\Controllers\Api\CommentController;
+use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\StatsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -21,9 +24,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         return \App\Models\User::where('is_approved', true)->select('id', 'name', 'role')->get();
     });
 
+    Route::apiResource('projects', ProjectController::class);
     Route::apiResource('bugs', BugController::class);
     Route::apiResource('tasks', \App\Http\Controllers\TaskController::class);
     Route::apiResource('comments', CommentController::class)->only(['index', 'store', 'destroy']);
+    Route::get('/activities', ActivityController::class);
+    Route::get('/stats', StatsController::class);
     
     // Admin Routes
     Route::get('/admin/users', [\App\Http\Controllers\Api\AdminController::class, 'index']);

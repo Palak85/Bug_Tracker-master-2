@@ -1,10 +1,14 @@
 import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
-import { LogOut, Bug, Plus, Search, Filter, CheckSquare, Clock, AlertCircle, Loader2, Users, Shield, Zap, Target } from 'lucide-react';
+import { LogOut, Bug, Plus, Search, Filter, CheckSquare, Clock, AlertCircle, Loader2, Users, Shield, Zap, Target, TrendingUp, Paperclip } from 'lucide-react';
 import BugModal from '../components/BugModal';
 import TaskModal from '../components/TaskModal';
 import ProfileModal from '../components/ProfileModal';
+import StatsTab from '../components/StatsTab';
+import ActivityFeed from '../components/ActivityFeed';
+import ProjectTab from '../components/ProjectTab';
+import { Layout } from 'lucide-react';
 
 export default function Dashboard() {
   const { user, logout } = useContext(AuthContext);
@@ -12,6 +16,7 @@ export default function Dashboard() {
   const [bugs, setBugs] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isBugModalOpen, setIsBugModalOpen] = useState(false);
@@ -22,7 +27,7 @@ export default function Dashboard() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [filters, setFilters] = useState({ status: '', priority: '', severity: '' });
+  const [filters, setFilters] = useState({ status: '', priority: '', severity: '', project_id: '' });
 
   useEffect(() => {
     const timer = setTimeout(() => { setDebouncedSearch(searchQuery); setPage(1); }, 500);
@@ -37,8 +42,14 @@ export default function Dashboard() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const usersRes = await api.get('/users');
+      const [usersRes, projectsRes] = await Promise.all([
+        api.get('/users'),
+        api.get('/projects')
+      ]);
+      
       setUsers(Array.isArray(usersRes.data) ? usersRes.data : usersRes.data.data || []);
+      setProjects(projectsRes.data || []);
+
       if (activeTab === 'bugs') {
         const bugsRes = await api.get('/bugs', { params: { ...filters, search: debouncedSearch, page } });
         setBugs(bugsRes.data.data || []);
@@ -86,12 +97,20 @@ export default function Dashboard() {
   };
 
   const items = activeTab === 'bugs' ? bugs : tasks;
-  const filteredItems = items.filter(item =>
-    (item.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.project || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.category || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredItems = items.filter(item => {
+    const search = searchQuery.toLowerCase();
+    const title = (item.title || '').toLowerCase();
+    const description = (item.description || '').toLowerCase();
+    const category = (item.category || '').toLowerCase();
+    const projectName = typeof item.project === 'object' && item.project 
+      ? (item.project.name || '').toLowerCase() 
+      : (item.project || '').toLowerCase();
+
+    return title.includes(search) || 
+           description.includes(search) || 
+           category.includes(search) || 
+           projectName.includes(search);
+  });
 
   const getPriorityStyle = (p) => {
     switch (p) {
@@ -112,8 +131,11 @@ export default function Dashboard() {
   };
 
   const navItems = [
-    { id: 'bugs',  icon: Bug,         label: 'Issues Log'   },
-    { id: 'tasks', icon: CheckSquare,  label: 'Sprint Board' },
+    { id: 'projects',  icon: Layout,      label: 'Projects'     },
+    { id: 'bugs',      icon: Bug,         label: 'Issues Log'   },
+    { id: 'tasks',     icon: CheckSquare,  label: 'Sprint Board' },
+    { id: 'analytics', icon: TrendingUp,   label: 'Analytics'    },
+    { id: 'activity',  icon: Clock,        label: 'Activity Log' },
     ...(user?.role === 'admin' ? [{ id: 'users', icon: Users, label: 'Team Access' }] : []),
   ];
 
@@ -195,59 +217,61 @@ export default function Dashboard() {
       {/* ── MAIN ── */}
       <main className="flex-1 overflow-y-auto relative z-10 p-8 lg:p-10">
 
-        {/* Stat cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {stats.map((s, i) => (
-            <div key={i} className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.07)] p-5 flex flex-col gap-2 hover:-translate-y-1 transition-transform duration-300">
-              <div className="flex justify-between items-center">
-                <p className="text-xs text-gray-400 font-semibold uppercase tracking-widest">{s.label}</p>
-                <s.icon className={`w-4 h-4 ${s.color}`} />
-              </div>
-              <p className={`text-4xl font-bold ${s.color}`}>{s.value}</p>
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full w-2/3" />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Search + Filters + CTA */}
-        <div className="flex flex-col xl:flex-row gap-4 mb-8">
-          {/* Search */}
-          <div className="relative flex-1 max-w-xl">
-            <Search className="w-4 h-4 text-gray-400 absolute left-5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search bugs, tasks, projects..."
-              className="w-full bg-white border border-gray-200 rounded-full pl-12 pr-5 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400/40 shadow-sm transition-all"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            {activeTab !== 'users' && ['status', 'priority', 'severity'].map(f => (
-              <div key={f} className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2.5 shadow-sm hover:border-purple-300 transition-colors">
-                <Filter className="w-3.5 h-3.5 text-purple-500" />
-                <select
-                  className="bg-transparent text-xs font-semibold text-gray-600 focus:outline-none capitalize cursor-pointer"
-                  value={filters[f]}
-                  onChange={e => handleFilterChange(f, e.target.value)}
-                >
-                  <option value="">All {f}</option>
-                  {f === 'status' ? (
-                    activeTab === 'bugs'
-                      ? ['reported','in_progress','resolved'].map(v => <option key={v} value={v}>{v.replace('_',' ')}</option>)
-                      : ['open','in_progress','resolved'].map(v => <option key={v} value={v}>{v.replace('_',' ')}</option>)
-                  ) : f === 'priority'
-                    ? ['low','medium','high','urgent'].map(v => <option key={v} value={v}>{v}</option>)
-                    : ['minor','major','critical','blocker'].map(v => <option key={v} value={v}>{v}</option>)
-                  }
-                </select>
+        {/* Stat cards — hidden on analytics/activity to avoid clutter */}
+        {['bugs', 'tasks', 'users'].includes(activeTab) && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
+            {stats.map((s, i) => (
+              <div key={i} className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.07)] p-5 flex flex-col gap-2 hover:-translate-y-1 transition-transform duration-300">
+                <div className="flex justify-between items-center">
+                  <p className="text-xs text-gray-400 font-semibold uppercase tracking-widest">{s.label}</p>
+                  <s.icon className={`w-4 h-4 ${s.color}`} />
+                </div>
+                <p className={`text-4xl font-bold ${s.color}`}>{s.value}</p>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full w-2/3" />
+                </div>
               </div>
             ))}
+          </div>
+        )}
 
-            {activeTab !== 'users' && (
+        {/* Search + Filters + CTA — only for bugs/tasks */}
+        {['bugs', 'tasks'].includes(activeTab) && (
+          <div className="flex flex-col xl:flex-row gap-4 mb-8 animate-in fade-in slide-in-from-top-2 duration-500">
+            {/* Search */}
+            <div className="relative flex-1 max-w-xl">
+              <Search className="w-4 h-4 text-gray-400 absolute left-5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search bugs, tasks, projects..."
+                className="w-full bg-white border border-gray-200 rounded-full pl-12 pr-5 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400/40 shadow-sm transition-all"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              {['status', 'priority', 'severity'].map(f => (
+                <div key={f} className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2.5 shadow-sm hover:border-purple-300 transition-colors">
+                  <Filter className="w-3.5 h-3.5 text-purple-500" />
+                  <select
+                    className="bg-transparent text-xs font-semibold text-gray-600 focus:outline-none capitalize cursor-pointer"
+                    value={filters[f]}
+                    onChange={e => handleFilterChange(f, e.target.value)}
+                  >
+                    <option value="">All {f}</option>
+                    {f === 'status' ? (
+                      activeTab === 'bugs'
+                        ? ['reported','in_progress','resolved'].map(v => <option key={v} value={v}>{v.replace('_',' ')}</option>)
+                        : ['open','in_progress','resolved'].map(v => <option key={v} value={v}>{v.replace('_',' ')}</option>)
+                    ) : f === 'priority'
+                      ? ['low','medium','high','urgent'].map(v => <option key={v} value={v}>{v}</option>)
+                      : ['minor','major','critical','blocker'].map(v => <option key={v} value={v}>{v}</option>)
+                    }
+                  </select>
+                </div>
+              ))}
+
               <button
                 onClick={handleCreateNew}
                 className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-3 rounded-full text-sm font-semibold shadow-lg shadow-purple-200 hover:scale-[1.03] active:scale-95 transition-all"
@@ -255,12 +279,12 @@ export default function Dashboard() {
                 <Plus className="w-4 h-4" />
                 New {activeTab === 'bugs' ? 'Bug' : 'Task'}
               </button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Content area */}
-        {isLoading ? (
+        {isLoading && ['bugs', 'tasks', 'users'].includes(activeTab) ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="bg-white rounded-2xl p-6 animate-pulse shadow-sm">
@@ -275,6 +299,12 @@ export default function Dashboard() {
             ))}
           </div>
 
+        ) : activeTab === 'analytics' ? (
+          <StatsTab />
+        ) : activeTab === 'activity' ? (
+          <ActivityFeed />
+        ) : activeTab === 'projects' ? (
+          <ProjectTab onUpdate={fetchData} />
         ) : activeTab === 'users' ? (
           /* ── USERS TABLE ── */
           <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.07)] overflow-hidden">
@@ -362,11 +392,14 @@ export default function Dashboard() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">#{item.id}</span>
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {item.project && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
+                      {(item.project || item.project_id) && (
                         <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200 font-bold uppercase tracking-wide">
-                          {item.project}
+                          {typeof item.project === 'object' ? item.project.name : item.project}
                         </span>
+                      )}
+                      {item.attachment_path && (
+                        <Paperclip size={12} className="text-gray-400" title="Has attachment" />
                       )}
                       {item.category && (
                         <span className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200 font-bold uppercase tracking-wide">
@@ -429,8 +462,8 @@ export default function Dashboard() {
       </main>
 
       {/* Modals */}
-      <BugModal isOpen={isBugModalOpen} onClose={() => setIsBugModalOpen(false)} bug={selectedItem} onSave={fetchData} users={users} currentUser={user} />
-      <TaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} task={selectedItem} onSave={fetchData} users={users} currentUser={user} />
+      <BugModal isOpen={isBugModalOpen} onClose={() => setIsBugModalOpen(false)} bug={selectedItem} onSave={fetchData} users={users} projects={projects} currentUser={user} />
+      <TaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} task={selectedItem} onSave={fetchData} users={users} projects={projects} currentUser={user} />
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </div>
   );

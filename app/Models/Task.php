@@ -19,6 +19,7 @@ class Task extends Model
         'severity',
         'category',
         'project',
+        'project_id',
         'deadline',
         'created_by',
         'assigned_to',
@@ -27,6 +28,11 @@ class Task extends Model
     protected $casts = [
         'deadline' => 'date',
     ];
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
 
     public function creator(): BelongsTo
     {

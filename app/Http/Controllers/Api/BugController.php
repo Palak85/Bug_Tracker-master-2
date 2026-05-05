@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Bug;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class BugController extends Controller
@@ -15,7 +16,7 @@ class BugController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Bug::with(['creator:id,name', 'assignee:id,name']);
+        $query = Bug::with(['creator:id,name', 'assignee:id,name', 'project:id,name']);
 
         $user = $request->user();
         if ($user && $user->role === 'dev') {
@@ -45,8 +46,8 @@ class BugController extends Controller
             $query->where('category', $request->category);
         }
 
-        if ($request->filled('project')) {
-            $query->where('project', 'like', '%' . $request->project . '%');
+        if ($request->filled('project_id')) {
+            $query->where('project_id', $request->project_id);
         }
 
         if ($request->filled('search')) {
@@ -73,14 +74,21 @@ class BugController extends Controller
             'severity'    => ['sometimes', Rule::in(['minor', 'major', 'critical', 'blocker'])],
             'assigned_to' => 'nullable|exists:users,id',
             'category'    => 'nullable|string|max:100',
-            'project'     => 'nullable|string|max:100',
+            'project_id'  => 'nullable|exists:projects,id',
+            'attachment'  => 'nullable|file|mimes:jpg,jpeg,png,pdf,txt|max:5120', // Max 5MB
         ]);
 
         $validated['created_by'] = $request->user()->id;
         $validated['status'] = 'reported';
 
+        if ($request->hasFile('attachment')) {
+            $path = $request->file('attachment')->store('attachments', 'public');
+            $validated['attachment_path'] = $path;
+            $validated['attachment_name'] = $request->file('attachment')->getClientOriginalName();
+        }
+
         $bug = Bug::create($validated);
-        $bug->load(['creator:id,name', 'assignee:id,name']);
+        $bug->load(['creator:id,name', 'assignee:id,name', 'project:id,name']);
 
         return response()->json($bug, 201);
     }
@@ -90,7 +98,7 @@ class BugController extends Controller
      */
     public function show(Bug $bug): JsonResponse
     {
-        $bug->load(['creator:id,name,email', 'assignee:id,name,email']);
+        $bug->load(['creator:id,name,email', 'assignee:id,name,email', 'project:id,name']);
 
         return response()->json($bug);
     }
@@ -121,12 +129,23 @@ class BugController extends Controller
                 'severity'    => ['sometimes', Rule::in(['minor', 'major', 'critical', 'blocker'])],
                 'assigned_to' => 'nullable|exists:users,id',
                 'category'    => 'sometimes|string|max:100',
-                'project'     => 'sometimes|string|max:100',
+                'project_id'  => 'nullable|exists:projects,id',
+                'attachment'  => 'nullable|file|mimes:jpg,jpeg,png,pdf,txt|max:5120',
             ]);
         }
 
+        if ($request->hasFile('attachment')) {
+            // Delete old attachment if exists
+            if ($bug->attachment_path) {
+                Storage::disk('public')->delete($bug->attachment_path);
+            }
+            $path = $request->file('attachment')->store('attachments', 'public');
+            $validated['attachment_path'] = $path;
+            $validated['attachment_name'] = $request->file('attachment')->getClientOriginalName();
+        }
+
         $bug->update($validated);
-        $bug->load(['creator:id,name', 'assignee:id,name']);
+        $bug->load(['creator:id,name', 'assignee:id,name', 'project:id,name']);
 
         return response()->json($bug);
     }
@@ -139,6 +158,11 @@ class BugController extends Controller
         $user = $request->user();
         if ($user->role !== 'admin' && $user->id !== $bug->created_by) {
             return response()->json(['message' => 'Unauthorized. Only admins or the creator can delete this bug.'], 403);
+        }
+
+        // Delete attachment if exists
+        if ($bug->attachment_path) {
+            Storage::disk('public')->delete($bug->attachment_path);
         }
 
         $bug->delete();

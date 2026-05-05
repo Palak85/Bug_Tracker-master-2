@@ -14,7 +14,7 @@ class TaskController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Task::with(['creator:id,name', 'assignee:id,name']);
+        $query = Task::with(['creator:id,name', 'assignee:id,name', 'project:id,name']);
 
         $user = $request->user();
         if ($user && $user->role === 'dev') {
@@ -44,8 +44,8 @@ class TaskController extends Controller
             $query->where('category', $request->category);
         }
 
-        if ($request->filled('project')) {
-            $query->where('project', 'like', '%' . $request->project . '%');
+        if ($request->filled('project_id')) {
+            $query->where('project_id', $request->project_id);
         }
 
         if ($request->filled('search')) {
@@ -73,14 +73,14 @@ class TaskController extends Controller
             'deadline'    => 'nullable|date',
             'assigned_to' => 'nullable|exists:users,id',
             'category'    => 'nullable|string|max:100',
-            'project'     => 'nullable|string|max:100',
+            'project_id'  => 'nullable|exists:projects,id',
         ]);
 
         $validated['created_by'] = $request->user()->id;
         $validated['status'] = 'open';
 
         $task = Task::create($validated);
-        $task->load(['creator:id,name', 'assignee:id,name']);
+        $task->load(['creator:id,name', 'assignee:id,name', 'project:id,name']);
 
         return response()->json($task, 201);
     }
@@ -90,7 +90,7 @@ class TaskController extends Controller
      */
     public function show(Task $task): JsonResponse
     {
-        $task->load(['assignee:id,name,email']);
+        $task->load(['assignee:id,name,email', 'project:id,name']);
 
         return response()->json($task);
     }
@@ -122,12 +122,12 @@ class TaskController extends Controller
                 'deadline'    => 'nullable|date',
                 'assigned_to' => 'nullable|exists:users,id',
                 'category'    => 'sometimes|string|max:100',
-                'project'     => 'sometimes|string|max:100',
+                'project_id'  => 'nullable|exists:projects,id',
             ]);
         }
 
         $task->update($validated);
-        $task->load(['assignee:id,name']);
+        $task->load(['assignee:id,name', 'project:id,name']);
 
         return response()->json($task);
     }

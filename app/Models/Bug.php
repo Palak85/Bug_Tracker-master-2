@@ -19,6 +19,9 @@ class Bug extends Model
         'severity',
         'category',
         'project',
+        'project_id',
+        'attachment_path',
+        'attachment_name',
         'created_by',
         'assigned_to',
     ];
@@ -28,6 +31,14 @@ class Bug extends Model
         'priority' => 'string',
         'severity' => 'string',
     ];
+
+    /**
+     * The project this bug belongs to.
+     */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
 
     /**
      * The user who created this bug.
