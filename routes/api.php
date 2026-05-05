@@ -14,6 +14,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
     
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::put('/profile', [AuthController::class, 'updateProfile']);
     
     Route::get('/users', function () {
         return \App\Models\User::where('is_approved', true)->select('id', 'name', 'role')->get();

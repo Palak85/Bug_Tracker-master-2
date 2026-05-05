@@ -1,44 +1,37 @@
 import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
-import { LogOut, Bug, Plus, Search, Filter, Calendar, CheckSquare, Clock, AlertCircle, Loader2, ChevronRight, LayoutDashboard, Settings, UserCircle, Bell, Users, Shield, Zap, Target } from 'lucide-react';
+import { LogOut, Bug, Plus, Search, Filter, CheckSquare, Clock, AlertCircle, Loader2, Users, Shield, Zap, Target } from 'lucide-react';
 import BugModal from '../components/BugModal';
 import TaskModal from '../components/TaskModal';
+import ProfileModal from '../components/ProfileModal';
 
 export default function Dashboard() {
   const { user, logout } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('bugs');
   const [bugs, setBugs] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [users, setUsers] = useState([]); // All users for dropdowns
-  const [adminUsers, setAdminUsers] = useState([]); // Users for the admin tab
+  const [users, setUsers] = useState([]);
+  const [adminUsers, setAdminUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isBugModalOpen, setIsBugModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [filters, setFilters] = useState({
-    status: '',
-    priority: '',
-    severity: ''
-  });
+  const [filters, setFilters] = useState({ status: '', priority: '', severity: '' });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-      setPage(1); // Reset page on new search
-    }, 500);
+    const timer = setTimeout(() => { setDebouncedSearch(searchQuery); setPage(1); }, 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
   useEffect(() => {
     fetchData();
-    if (user?.role === 'admin' && activeTab === 'users') {
-      fetchAdminUsers();
-    }
+    if (user?.role === 'admin' && activeTab === 'users') fetchAdminUsers();
   }, [activeTab, user, filters, debouncedSearch, page]);
 
   const fetchData = async () => {
@@ -46,7 +39,6 @@ export default function Dashboard() {
     try {
       const usersRes = await api.get('/users');
       setUsers(Array.isArray(usersRes.data) ? usersRes.data : usersRes.data.data || []);
-      
       if (activeTab === 'bugs') {
         const bugsRes = await api.get('/bugs', { params: { ...filters, search: debouncedSearch, page } });
         setBugs(bugsRes.data.data || []);
@@ -63,37 +55,22 @@ export default function Dashboard() {
     }
   };
 
-  const handleFilterChange = (f, val) => {
-    setFilters({ ...filters, [f]: val });
-    setPage(1);
-  };
+  const handleFilterChange = (f, val) => { setFilters({ ...filters, [f]: val }); setPage(1); };
 
   const fetchAdminUsers = async () => {
-    try {
-      const res = await api.get('/admin/users');
-      setAdminUsers(res.data);
-    } catch (err) {
-      console.error('Failed to fetch admin users', err);
-    }
+    try { const res = await api.get('/admin/users'); setAdminUsers(res.data); }
+    catch (err) { console.error('Failed to fetch admin users', err); }
   };
 
   const handleApprove = async (id) => {
-    try {
-      await api.patch(`/admin/users/${id}/approve`);
-      fetchAdminUsers();
-    } catch (err) {
-      alert('Failed to approve user');
-    }
+    try { await api.patch(`/admin/users/${id}/approve`); fetchAdminUsers(); }
+    catch { alert('Failed to approve user'); }
   };
 
   const handleReject = async (id) => {
     if (!confirm('Are you sure you want to remove this user?')) return;
-    try {
-      await api.delete(`/admin/users/${id}`);
-      fetchAdminUsers();
-    } catch (err) {
-      alert('Failed to remove user');
-    }
+    try { await api.delete(`/admin/users/${id}`); fetchAdminUsers(); }
+    catch { alert('Failed to remove user'); }
   };
 
   const handleCreateNew = () => {
@@ -109,370 +86,352 @@ export default function Dashboard() {
   };
 
   const items = activeTab === 'bugs' ? bugs : tasks;
-  const filteredItems = items.filter(item => 
-    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.project?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredItems = items.filter(item =>
+    (item.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.project || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.category || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getPriorityColor = (p) => {
-    switch(p) {
-      case 'urgent': return 'text-rose-400 bg-rose-400/10 border-rose-400/20 shadow-[0_0_15px_rgba(251,113,133,0.1)]';
-      case 'high': return 'text-amber-400 bg-amber-400/10 border-amber-400/20';
-      case 'medium': return 'text-indigo-400 bg-indigo-400/10 border-indigo-400/20';
-      default: return 'text-slate-400 bg-slate-400/10 border-slate-400/20';
+  const getPriorityStyle = (p) => {
+    switch (p) {
+      case 'urgent': return 'text-rose-600 bg-rose-50 border-rose-200';
+      case 'high':   return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'medium': return 'text-indigo-600 bg-indigo-50 border-indigo-200';
+      default:       return 'text-gray-500 bg-gray-100 border-gray-200';
     }
   };
 
-  const getStatusColor = (s) => {
-    switch(s) {
+  const getStatusStyle = (s) => {
+    switch (s) {
       case 'resolved':
-      case 'closed': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]';
-      case 'in_progress': return 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]';
-      default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+      case 'closed':      return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+      case 'in_progress': return 'text-indigo-600 bg-indigo-50 border-indigo-200';
+      default:            return 'text-gray-500 bg-gray-100 border-gray-200';
     }
   };
+
+  const navItems = [
+    { id: 'bugs',  icon: Bug,         label: 'Issues Log'   },
+    { id: 'tasks', icon: CheckSquare,  label: 'Sprint Board' },
+    ...(user?.role === 'admin' ? [{ id: 'users', icon: Users, label: 'Team Access' }] : []),
+  ];
+
+  const stats = [
+    { label: 'Total',    value: activeTab === 'bugs' ? bugs.length : tasks.length, color: 'text-purple-600', icon: Zap },
+    { label: 'Critical', value: filteredItems.filter(i => i.priority === 'urgent' || i.priority === 'high').length, color: 'text-rose-500', icon: AlertCircle },
+    { label: 'Active',   value: filteredItems.filter(i => i.status === 'in_progress').length, color: 'text-indigo-600', icon: Target },
+    { label: 'Resolved', value: filteredItems.filter(i => i.status === 'resolved' || i.status === 'closed').length, color: 'text-emerald-600', icon: CheckSquare },
+  ];
 
   return (
-    <div className="flex h-screen bg-[#050505] text-slate-300 overflow-hidden font-sans">
-      {/* Premium Sidebar */}
-      <aside className="w-80 bg-[#0a0a0a] border-r border-white/5 flex flex-col relative z-30 shadow-[10px_0_50px_rgba(0,0,0,0.5)]">
-        <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none"></div>
-        
-        <div className="p-10 relative z-10">
-          <div className="flex items-center gap-4 mb-14 group cursor-pointer">
-            <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-3 rounded-2xl shadow-2xl shadow-indigo-500/30 group-hover:rotate-6 transition-transform duration-500">
-              <Bug className="w-6 h-6 text-white" />
+    <div className="flex h-screen bg-[#e9edf5] text-gray-800 overflow-hidden font-sans relative">
+      {/* Background blobs */}
+      <div className="absolute w-[600px] h-[600px] bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full blur-[160px] top-[-200px] left-[-200px] opacity-25 pointer-events-none z-0" />
+      <div className="absolute w-[500px] h-[500px] bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full blur-[160px] bottom-[-200px] right-[-200px] opacity-25 pointer-events-none z-0" />
+
+      {/* ── SIDEBAR ── */}
+      <aside className="relative z-10 w-72 bg-white shadow-[4px_0_30px_rgba(0,0,0,0.08)] flex flex-col">
+        {/* Logo */}
+        <div className="px-8 pt-8 pb-6">
+          <div className="flex items-center gap-3 mb-10">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <Bug className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="text-2xl font-black text-white tracking-tighter block leading-none">BugFinder</span>
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400">Enterprise</span>
+              <span className="text-lg font-bold text-gray-800 leading-none block">BugFinder</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-purple-500">Enterprise</span>
             </div>
           </div>
 
-          <nav className="space-y-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 mb-6 ml-4">Command Terminal</p>
-            <button 
-              onClick={() => { setActiveTab('bugs'); setPage(1); }}
-              className={`w-full flex items-center gap-4 px-6 py-5 rounded-2xl transition-all duration-500 group relative overflow-hidden ${activeTab === 'bugs' ? 'bg-indigo-500 text-white shadow-2xl shadow-indigo-500/40' : 'text-slate-500 hover:bg-white/5 hover:text-white'}`}
-            >
-              <Bug className={`w-5 h-5 relative z-10 ${activeTab === 'bugs' ? 'text-white' : 'group-hover:text-indigo-400 transition-colors'}`} />
-              <span className="text-xs font-black uppercase tracking-[0.2em] relative z-10">Issues Log</span>
-              {activeTab === 'bugs' && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>}
-            </button>
-            <button 
-              onClick={() => { setActiveTab('tasks'); setPage(1); }}
-              className={`w-full flex items-center gap-4 px-6 py-5 rounded-2xl transition-all duration-500 group relative overflow-hidden ${activeTab === 'tasks' ? 'bg-indigo-500 text-white shadow-2xl shadow-indigo-500/40' : 'text-slate-500 hover:bg-white/5 hover:text-white'}`}
-            >
-              <CheckSquare className={`w-5 h-5 relative z-10 ${activeTab === 'tasks' ? 'text-white' : 'group-hover:text-indigo-400 transition-colors'}`} />
-              <span className="text-xs font-black uppercase tracking-[0.2em] relative z-10">Sprint Board</span>
-              {activeTab === 'tasks' && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>}
-            </button>
-            {user?.role === 'admin' && (
-              <button 
-                onClick={() => { setActiveTab('users'); setPage(1); }}
-                className={`w-full flex items-center gap-4 px-6 py-5 rounded-2xl transition-all duration-500 group relative overflow-hidden ${activeTab === 'users' ? 'bg-indigo-500 text-white shadow-2xl shadow-indigo-500/40' : 'text-slate-500 hover:bg-white/5 hover:text-white'}`}
+          {/* Nav */}
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 ml-2">Navigation</p>
+          <nav className="space-y-2">
+            {navItems.map(({ id, icon: Icon, label }) => (
+              <button
+                key={id}
+                onClick={() => { setActiveTab(id); setPage(1); }}
+                className={`w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-300 ${
+                  activeTab === id
+                    ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-lg shadow-purple-200'
+                    : 'text-gray-500 hover:bg-[#f3f5f9] hover:text-purple-600'
+                }`}
               >
-                <Users className={`w-5 h-5 relative z-10 ${activeTab === 'users' ? 'text-white' : 'group-hover:text-indigo-400 transition-colors'}`} />
-                <span className="text-xs font-black uppercase tracking-[0.2em] relative z-10">Team Access</span>
-                {activeTab === 'users' && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>}
+                <Icon className="w-4 h-4" />
+                {label}
               </button>
-            )}
+            ))}
           </nav>
         </div>
 
-        <div className="mt-auto p-8 relative z-10">
-          <div className="glass-panel p-6 rounded-3xl border-white/5 bg-white/[0.02] mb-6 hover:bg-white/[0.05] transition-all cursor-pointer group">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-xl shadow-indigo-500/20 group-hover:scale-110 transition-transform">
-                {user?.name?.charAt(0)}
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-sm font-black text-white truncate">{user?.name}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <Shield className="w-3 h-3 text-indigo-400" />
-                  <p className="text-[9px] uppercase tracking-widest text-slate-500 font-black">{user?.role}</p>
-                </div>
+        {/* User card — click to open profile */}
+        <div className="mt-auto px-6 pb-8">
+          <button
+            onClick={() => setIsProfileOpen(true)}
+            className="w-full bg-[#f3f5f9] rounded-2xl p-4 flex items-center gap-3 mb-4 hover:bg-purple-50 hover:ring-2 hover:ring-purple-200 transition-all text-left group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow flex-shrink-0">
+              {user?.name?.charAt(0)}
+            </div>
+            <div className="overflow-hidden flex-1">
+              <p className="font-bold text-gray-800 text-sm truncate group-hover:text-purple-700 transition-colors">{user?.name}</p>
+              <div className="flex items-center gap-1">
+                <Shield className="w-3 h-3 text-purple-500" />
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">{user?.role}</p>
               </div>
             </div>
-          </div>
-          <button 
+            <span className="text-[10px] text-purple-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Edit ✦</span>
+          </button>
+          <button
             onClick={logout}
-            className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl text-rose-500 hover:bg-rose-500/10 transition-all font-black text-[10px] uppercase tracking-[0.3em] border border-transparent hover:border-rose-500/20"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-rose-500 border border-rose-200 bg-rose-50 hover:bg-rose-100 transition-colors text-xs font-bold uppercase tracking-widest"
           >
             <LogOut className="w-4 h-4" />
-            Terminate Session
+            Sign Out
           </button>
         </div>
       </aside>
 
-      {/* Dynamic Main Workspace */}
-      <main className="flex-1 overflow-y-auto relative bg-[#050505] p-10 lg:p-20 selection:bg-indigo-500/30">
-        {/* Cinematic Lighting */}
-        <div className="absolute top-0 right-0 w-[60%] h-[60%] bg-indigo-600/10 rounded-full blur-[180px] -mr-[20%] -mt-[20%] pointer-events-none opacity-50 animate-pulse"></div>
-        <div className="absolute bottom-0 left-0 w-[40%] h-[40%] bg-purple-600/5 rounded-full blur-[150px] -ml-[10%] -mb-[10%] pointer-events-none opacity-50"></div>
+      {/* ── MAIN ── */}
+      <main className="flex-1 overflow-y-auto relative z-10 p-8 lg:p-10">
 
-        <div className="max-w-7xl mx-auto relative z-10">
-          {/* Header Dashboard Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-20">
-            {[
-              { label: 'System Volume', value: activeTab === 'bugs' ? bugs.length : tasks.length, color: 'text-indigo-400', icon: Zap },
-              { label: 'Critical Risk', value: filteredItems.filter(i => i.priority === 'urgent' || i.priority === 'high').length, color: 'text-rose-400', icon: AlertCircle },
-              { label: 'Active Targets', value: filteredItems.filter(i => i.status === 'in_progress').length, color: 'text-blue-400', icon: Target },
-              { label: 'Resolved Signals', value: filteredItems.filter(i => i.status === 'resolved' || i.status === 'closed').length, color: 'text-emerald-400', icon: CheckSquare }
-            ].map((stat, idx) => (
-              <div key={idx} className="glass-panel p-8 rounded-[2.5rem] border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-all hover:-translate-y-2 duration-500 group">
-                <div className="flex justify-between items-start mb-6">
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">{stat.label}</p>
-                  <stat.icon className={`w-5 h-5 ${stat.color} opacity-40 group-hover:opacity-100 transition-opacity`} />
-                </div>
-                <p className="text-5xl font-black text-white tracking-tighter">{stat.value}</p>
-                <div className="mt-6 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                  <div className={`h-full bg-gradient-to-r from-indigo-500 to-purple-500 w-2/3`}></div>
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {stats.map((s, i) => (
+            <div key={i} className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.07)] p-5 flex flex-col gap-2 hover:-translate-y-1 transition-transform duration-300">
+              <div className="flex justify-between items-center">
+                <p className="text-xs text-gray-400 font-semibold uppercase tracking-widest">{s.label}</p>
+                <s.icon className={`w-4 h-4 ${s.color}`} />
+              </div>
+              <p className={`text-4xl font-bold ${s.color}`}>{s.value}</p>
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full w-2/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Search + Filters + CTA */}
+        <div className="flex flex-col xl:flex-row gap-4 mb-8">
+          {/* Search */}
+          <div className="relative flex-1 max-w-xl">
+            <Search className="w-4 h-4 text-gray-400 absolute left-5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search bugs, tasks, projects..."
+              className="w-full bg-white border border-gray-200 rounded-full pl-12 pr-5 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400/40 shadow-sm transition-all"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            {activeTab !== 'users' && ['status', 'priority', 'severity'].map(f => (
+              <div key={f} className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2.5 shadow-sm hover:border-purple-300 transition-colors">
+                <Filter className="w-3.5 h-3.5 text-purple-500" />
+                <select
+                  className="bg-transparent text-xs font-semibold text-gray-600 focus:outline-none capitalize cursor-pointer"
+                  value={filters[f]}
+                  onChange={e => handleFilterChange(f, e.target.value)}
+                >
+                  <option value="">All {f}</option>
+                  {f === 'status' ? (
+                    activeTab === 'bugs'
+                      ? ['reported','in_progress','resolved'].map(v => <option key={v} value={v}>{v.replace('_',' ')}</option>)
+                      : ['open','in_progress','resolved'].map(v => <option key={v} value={v}>{v.replace('_',' ')}</option>)
+                  ) : f === 'priority'
+                    ? ['low','medium','high','urgent'].map(v => <option key={v} value={v}>{v}</option>)
+                    : ['minor','major','critical','blocker'].map(v => <option key={v} value={v}>{v}</option>)
+                  }
+                </select>
+              </div>
+            ))}
+
+            {activeTab !== 'users' && (
+              <button
+                onClick={handleCreateNew}
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-3 rounded-full text-sm font-semibold shadow-lg shadow-purple-200 hover:scale-[1.03] active:scale-95 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                New {activeTab === 'bugs' ? 'Bug' : 'Task'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Content area */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl p-6 animate-pulse shadow-sm">
+                <div className="w-20 h-4 bg-gray-100 rounded-full mb-4" />
+                <div className="w-full h-5 bg-gray-100 rounded-xl mb-2" />
+                <div className="w-3/4 h-4 bg-gray-100 rounded-xl mb-6" />
+                <div className="flex justify-between pt-4 border-t border-gray-50">
+                  <div className="w-16 h-4 bg-gray-100 rounded" />
+                  <div className="w-16 h-4 bg-gray-100 rounded" />
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Action Hub */}
-          <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-10 mb-16">
-            <div className="relative w-full max-w-2xl group">
-              <div className="absolute inset-0 bg-indigo-500/10 blur-3xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-700"></div>
-              <Search className="w-6 h-6 text-slate-600 absolute left-8 top-1/2 -translate-y-1/2 group-focus-within:text-indigo-400 transition-colors" />
-              <input 
-                type="text" 
-                placeholder="Search encrypted database..." 
-                className="w-full bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] pl-20 pr-10 py-6 text-sm font-bold text-white placeholder-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all shadow-2xl"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <div className="flex items-center gap-6">
-              {activeTab !== 'users' && (
-                <div className="flex items-center gap-4">
-                  {['status', 'priority', 'severity'].map((f) => (
-                    <div key={f} className="glass-panel bg-white/[0.02] border border-white/5 rounded-2xl px-6 py-4 flex items-center gap-3 hover:border-indigo-500/30 transition-all cursor-pointer">
-                      <Filter className="w-4 h-4 text-indigo-400" />
-                      <select 
-                        className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest text-slate-400 focus:ring-0 p-0 pr-8 cursor-pointer hover:text-white transition-colors"
-                        value={filters[f]}
-                        onChange={(e) => handleFilterChange(f, e.target.value)}
-                      >
-                        <option value="" className="bg-[#0a0a0a] text-white">All {f.toUpperCase()}</option>
-                        {f === 'status' ? (
-                          activeTab === 'bugs' ? (
-                            <>
-                              <option value="reported" className="bg-[#0a0a0a] text-white">Reported</option>
-                              <option value="in_progress" className="bg-[#0a0a0a] text-white">Active</option>
-                              <option value="resolved" className="bg-[#0a0a0a] text-white">Resolved</option>
-                            </>
-                          ) : (
-                            <>
-                              <option value="open" className="bg-[#0a0a0a] text-white">Open</option>
-                              <option value="in_progress" className="bg-[#0a0a0a] text-white">Active</option>
-                              <option value="resolved" className="bg-[#0a0a0a] text-white">Done</option>
-                            </>
-                          )
-                        ) : f === 'priority' ? (
-                          <>
-                            <option value="low" className="bg-[#0a0a0a] text-white">Low</option>
-                            <option value="medium" className="bg-[#0a0a0a] text-white">Medium</option>
-                            <option value="high" className="bg-[#0a0a0a] text-white">High</option>
-                            <option value="urgent" className="bg-[#0a0a0a] text-white">Urgent</option>
-                          </>
-                        ) : (
-                          <>
-                            <option value="minor" className="bg-[#0a0a0a] text-white">Minor</option>
-                            <option value="major" className="bg-[#0a0a0a] text-white">Major</option>
-                            <option value="critical" className="bg-[#0a0a0a] text-white">Critical</option>
-                            <option value="blocker" className="bg-[#0a0a0a] text-white">Blocker</option>
-                          </>
-                        )}
-                      </select>
-                    </div>
+        ) : activeTab === 'users' ? (
+          /* ── USERS TABLE ── */
+          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.07)] overflow-hidden">
+            <table className="w-full text-left">
+              <thead className="bg-[#f3f5f9] border-b border-gray-100">
+                <tr>
+                  {['Identity','Role','Status','Actions'].map(h => (
+                    <th key={h} className="px-8 py-5 text-[11px] font-bold uppercase tracking-widest text-gray-400">{h}</th>
                   ))}
-                </div>
-              )}
-              <button 
-                onClick={handleCreateNew}
-                className="bg-indigo-500 hover:bg-indigo-600 text-white px-12 py-6 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] flex items-center gap-4 transition-all duration-500 shadow-[0_20px_50px_rgba(79,70,229,0.3)] hover:scale-105 active:scale-95 group"
-              >
-                <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" />
-                New {activeTab === 'bugs' ? 'Report' : 'Target'}
-              </button>
-            </div>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {adminUsers.map(u => (
+                  <tr key={u.id} className="hover:bg-[#f8f9fc] transition-colors group">
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow">
+                          {u.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-800">{u.name}</p>
+                          <p className="text-xs text-gray-400">{u.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className="text-xs font-bold uppercase tracking-widest text-purple-600 bg-purple-50 border border-purple-200 px-3 py-1 rounded-full">
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${u.is_approved ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
+                        <span className={`text-xs font-bold ${u.is_approved ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          {u.is_approved ? 'Approved' : 'Pending'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex gap-2">
+                        {!u.is_approved && (
+                          <button
+                            onClick={() => handleApprove(u.id)}
+                            className="px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow"
+                          >
+                            Approve
+                          </button>
+                        )}
+                        {u.id !== user.id && (
+                          <button
+                            onClick={() => handleReject(u.id)}
+                            className="px-4 py-1.5 rounded-full text-xs font-bold border border-rose-200 text-rose-500 hover:bg-rose-50 transition-colors"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
-          {/* Attractive Content Cards */}
-          {isLoading ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-10">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="glass-panel rounded-[3rem] p-10 border-white/5 animate-pulse bg-white/[0.01]">
-                  <div className="w-24 h-6 bg-white/5 rounded-full mb-10"></div>
-                  <div className="w-full h-10 bg-white/5 rounded-2xl mb-4"></div>
-                  <div className="w-2/3 h-8 bg-white/5 rounded-2xl mb-12"></div>
-                  <div className="flex justify-between pt-8 border-t border-white/5">
-                    <div className="flex gap-4">
-                      <div className="w-12 h-12 bg-white/5 rounded-2xl"></div>
-                      <div className="w-24 h-6 bg-white/5 rounded-xl mt-3"></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+        ) : filteredItems.length === 0 ? (
+          /* ── EMPTY STATE ── */
+          <div className="text-center py-40 bg-white rounded-2xl border-2 border-dashed border-gray-200 shadow-sm">
+            <div className="w-16 h-16 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto mb-5">
+              <Bug className="w-8 h-8 text-purple-300" />
             </div>
-          ) : activeTab === 'users' ? (
-            <div className="glass-panel rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl bg-[#0a0a0a]">
-              <table className="w-full text-left">
-                <thead className="bg-white/[0.02] border-b border-white/5">
-                  <tr>
-                    <th className="px-12 py-8 text-[11px] font-black uppercase tracking-[0.3em] text-slate-500">Identity</th>
-                    <th className="px-10 py-8 text-[11px] font-black uppercase tracking-[0.3em] text-slate-500">Privileges</th>
-                    <th className="px-10 py-8 text-[11px] font-black uppercase tracking-[0.3em] text-slate-500">Authentication</th>
-                    <th className="px-12 py-8 text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 text-right">Ops</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {adminUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-white/[0.01] transition-colors group">
-                      <td className="px-12 py-10">
-                        <div className="flex items-center gap-6">
-                          <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-white/5 flex items-center justify-center text-indigo-400 font-black text-xl shadow-inner group-hover:scale-110 transition-transform">
-                            {u.name.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="font-black text-white text-lg leading-tight">{u.name}</p>
-                            <p className="text-xs text-slate-600 font-bold tracking-tight">{u.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-10 py-10 text-xs font-black uppercase tracking-[0.2em] text-indigo-400">{u.role}</td>
-                      <td className="px-10 py-10">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-2 h-2 rounded-full ${u.is_approved ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-amber-500 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.5)]'}`}></div>
-                          <span className={`text-[11px] font-black uppercase tracking-widest ${u.is_approved ? 'text-emerald-500' : 'text-amber-500'}`}>
-                            {u.is_approved ? 'Authenticated' : 'Pending Verification'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-12 py-10 text-right">
-                        <div className="flex justify-end gap-4">
-                          {!u.is_approved && (
-                            <button onClick={() => handleApprove(u.id)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-500/20 active:scale-95 transition-all">Verify Access</button>
-                          )}
-                          {u.id !== user.id && (
-                            <button onClick={() => handleReject(u.id)} className="text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Revoke</button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : filteredItems.length === 0 ? (
-            <div className="text-center py-56 glass-panel rounded-[4rem] border-white/5 border-dashed bg-white/[0.01]">
-              <div className="bg-slate-900 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-inner group">
-                <Bug className="w-10 h-10 text-slate-700 group-hover:text-indigo-500 transition-colors" />
-              </div>
-              <h3 className="text-4xl font-black text-white mb-4 tracking-tighter">Database Silent</h3>
-              <p className="text-slate-600 font-bold uppercase tracking-[0.3em] text-[10px]">No anomalies detected in the current sector</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-10">
-              {filteredItems.map((item) => (
-                <div 
-                  key={item.id} 
-                  onClick={() => handleEdit(item)}
-                  className="glass-panel rounded-[3rem] p-10 border border-white/5 bg-[#0a0a0a] group cursor-pointer hover:border-indigo-500/40 hover:shadow-[0_40px_100px_rgba(0,0,0,0.8)] transition-all duration-700 relative overflow-hidden active:scale-[0.98]"
-                >
-                  {/* Subtle Gradient Glow */}
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-[100px] -mr-32 -mt-32 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                  
-                  <div className="flex justify-between items-start mb-10 relative z-10">
-                    <div className="flex flex-col gap-3">
-                      <span className="text-[11px] font-black tracking-[0.4em] text-slate-600 uppercase">SIGNAL #{item.id}</span>
-                      <div className="flex flex-wrap gap-2">
-                        {item.project && <span className="px-4 py-2 rounded-xl bg-indigo-500/10 text-indigo-400 text-[9px] font-black uppercase tracking-[0.2em] border border-indigo-500/20">{item.project}</span>}
-                        {item.category && <span className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 text-[9px] font-black uppercase tracking-[0.2em] border border-purple-500/20">{item.category}</span>}
-                      </div>
-                    </div>
-                    <span className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border shadow-2xl ${getStatusColor(item.status)}`}>
-                      {item.status.replace('_', ' ')}
-                    </span>
-                  </div>
+            <h3 className="text-xl font-bold text-gray-700 mb-2">Nothing here yet</h3>
+            <p className="text-gray-400 text-sm">No {activeTab} found matching your filters</p>
+          </div>
 
-                  <h3 className="text-3xl font-black text-white mb-6 line-clamp-2 group-hover:text-indigo-400 transition-colors duration-500 leading-tight tracking-tight relative z-10">
-                    {item.title}
-                  </h3>
-                  <p className="text-slate-500 font-medium text-base line-clamp-3 mb-12 leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity relative z-10">
-                    {item.description}
-                  </p>
-
-                  <div className="flex items-center justify-between pt-10 border-t border-white/5 relative z-10">
-                    <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-white/5 flex items-center justify-center text-xl font-black text-white shadow-xl group-hover:scale-110 transition-transform duration-500">
-                        {(item.creator?.name || 'U')?.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-700 leading-none mb-2">Reporter</p>
-                        <p className="text-base font-black text-white leading-none tracking-tight">{item.creator?.name || 'Anonymous'}</p>
-                      </div>
-                    </div>
-
-                    <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl border shadow-xl ${getPriorityColor(item.priority)}`}>
-                      <Clock className="w-4 h-4" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">{item.priority}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Pagination Controls */}
-          {activeTab !== 'users' && !isLoading && filteredItems.length > 0 && totalPages > 1 && (
-            <div className="flex items-center justify-center gap-6 mt-16">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        ) : (
+          /* ── CARDS GRID ── */
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
+            {filteredItems.map(item => (
+              <div
+                key={item.id}
+                onClick={() => handleEdit(item)}
+                className="bg-white rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.07)] border border-transparent hover:border-purple-200 hover:shadow-[0_8px_30px_rgba(139,92,246,0.12)] transition-all duration-300 cursor-pointer group"
               >
-                Previous
-              </button>
-              <div className="text-slate-400 font-bold text-sm">
-                Page <span className="text-white">{page}</span> of <span className="text-white">{totalPages}</span>
+                {/* Top row: ID + tags + status */}
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">#{item.id}</span>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {item.project && (
+                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200 font-bold uppercase tracking-wide">
+                          {item.project}
+                        </span>
+                      )}
+                      {item.category && (
+                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200 font-bold uppercase tracking-wide">
+                          {item.category}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span className={`text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${getStatusStyle(item.status)}`}>
+                    {(item.status || '').replace('_', ' ')}
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h3 className="font-bold text-gray-800 text-base mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors leading-snug">
+                  {item.title}
+                </h3>
+                <p className="text-gray-400 text-sm line-clamp-2 mb-5 leading-relaxed">{item.description}</p>
+
+                {/* Footer: reporter + priority */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow">
+                      {(item.creator?.name || 'U').charAt(0)}
+                    </div>
+                    <span className="text-xs text-gray-500 font-medium">{item.creator?.name || 'Anonymous'}</span>
+                  </div>
+                  <span className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${getPriorityStyle(item.priority)}`}>
+                    <Clock className="w-3 h-3" />
+                    {item.priority || 'none'}
+                  </span>
+                </div>
               </div>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {activeTab !== 'users' && !isLoading && filteredItems.length > 0 && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-4 mt-10">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-6 py-2.5 rounded-full text-sm font-semibold bg-white border border-gray-200 text-gray-600 hover:border-purple-300 hover:text-purple-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-500 font-medium">
+              Page <span className="font-bold text-gray-800">{page}</span> of <span className="font-bold text-gray-800">{totalPages}</span>
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-6 py-2.5 rounded-full text-sm font-semibold bg-white border border-gray-200 text-gray-600 hover:border-purple-300 hover:text-purple-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </main>
 
       {/* Modals */}
-      <BugModal 
-        isOpen={isBugModalOpen}
-        onClose={() => setIsBugModalOpen(false)}
-        bug={selectedItem}
-        onSave={fetchData}
-        users={users}
-        currentUser={user}
-      />
-      <TaskModal 
-        isOpen={isTaskModalOpen}
-        onClose={() => setIsTaskModalOpen(false)}
-        task={selectedItem}
-        onSave={fetchData}
-        users={users}
-        currentUser={user}
-      />
+      <BugModal isOpen={isBugModalOpen} onClose={() => setIsBugModalOpen(false)} bug={selectedItem} onSave={fetchData} users={users} currentUser={user} />
+      <TaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} task={selectedItem} onSave={fetchData} users={users} currentUser={user} />
+      <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </div>
   );
 }

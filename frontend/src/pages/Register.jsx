@@ -21,12 +21,10 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
     if (formData.password !== formData.password_confirmation) {
       setError('Passwords do not match');
       return;
     }
-
     setIsLoading(true);
     try {
       const response = await register(formData.name, formData.email, formData.password, formData.password_confirmation, formData.role);
@@ -38,148 +36,134 @@ export default function Register() {
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  /* shared input class — matches login page's pill inputs */
+  const inputCls = 'flex items-center gap-3 bg-[#f3f5f9] px-5 py-3 rounded-full shadow-inner';
+  const fieldCls = 'bg-transparent outline-none w-full text-gray-700 text-sm placeholder-gray-400';
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Abstract Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] bg-indigo-600/10 rounded-full blur-[150px] animate-pulse"></div>
-        <div className="absolute bottom-[-20%] left-[-10%] w-[60%] h-[60%] bg-purple-600/10 rounded-full blur-[150px] animate-pulse" style={{ animationDelay: '1.5s' }}></div>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-[#e9edf5] relative overflow-hidden py-10">
+      {/* Background blobs — same as Login */}
+      <div className="absolute w-[600px] h-[600px] bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full blur-[150px] top-[-200px] left-[-200px] opacity-40" />
+      <div className="absolute w-[500px] h-[500px] bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full blur-[150px] bottom-[-200px] right-[-200px] opacity-40" />
 
-      <div className="w-full max-w-[550px] relative z-10">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-2xl shadow-indigo-500/20 mb-6 group cursor-pointer hover:scale-110 transition-transform duration-500">
-            <Bug className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-4xl font-black text-white tracking-tighter mb-3 text-center">Join the Network</h1>
-          <p className="text-slate-500 font-medium tracking-tight text-center">Initialize your professional engineering profile</p>
-        </div>
+      {/* Card — mirrors Login split layout */}
+      <div className="relative w-full max-w-[900px] mx-4 bg-white rounded-[30px] shadow-[0_25px_60px_rgba(0,0,0,0.15)] flex overflow-hidden min-h-[580px]">
 
-        <div className="glass-panel p-10 rounded-[2.5rem] border-white/5 shadow-2xl">
+        {/* LEFT — form */}
+        <div className="flex-1 flex flex-col justify-center px-12 py-10 z-10">
+          <h1 className="text-3xl font-bold text-gray-800 mb-1">Create Account</h1>
+          <p className="text-gray-500 text-sm mb-6">Join the team and start tracking bugs</p>
+
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-8 flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-red-400" />
-              <p className="text-xs font-black text-red-400 uppercase tracking-widest">{error}</p>
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-2xl mb-5 flex items-center gap-2">
+              <AlertCircle size={14} /> {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Full Name</label>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Name + Email row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className={inputCls}>
                 <input
                   type="text"
                   name="name"
                   required
-                  className="w-full bg-slate-900/50 border border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all duration-300"
-                  placeholder="John Doe"
+                  placeholder="Full Name"
+                  className={fieldCls}
                   value={formData.name}
                   onChange={handleChange}
                 />
               </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Work Email</label>
+              <div className={inputCls}>
                 <input
                   type="email"
                   name="email"
                   required
-                  className="w-full bg-slate-900/50 border border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all duration-300"
-                  placeholder="name@company.com"
+                  placeholder="Work Email"
+                  className={fieldCls}
                   value={formData.email}
                   onChange={handleChange}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Password</label>
-                <div className="relative group">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    required
-                    className="w-full bg-slate-900/50 border border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all duration-300"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleChange}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors p-1"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
+            {/* Password + Confirm row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className={inputCls}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  required
+                  placeholder="Password"
+                  className={fieldCls}
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-gray-400 hover:text-purple-500 transition-colors">
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Confirm</label>
-                <div className="relative group">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    name="password_confirmation"
-                    required
-                    className="w-full bg-slate-900/50 border border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all duration-300"
-                    placeholder="••••••••"
-                    value={formData.password_confirmation}
-                    onChange={handleChange}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors p-1"
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
+              <div className={inputCls}>
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="password_confirmation"
+                  required
+                  placeholder="Confirm Password"
+                  className={fieldCls}
+                  value={formData.password_confirmation}
+                  onChange={handleChange}
+                />
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="text-gray-400 hover:text-purple-500 transition-colors">
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Professional Role</label>
+            {/* Role */}
+            <div className={inputCls}>
               <select
                 name="role"
                 required
-                className="w-full bg-slate-900/50 border border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all duration-300 appearance-none cursor-pointer"
+                className="bg-transparent outline-none w-full text-gray-700 text-sm cursor-pointer"
                 value={formData.role}
                 onChange={handleChange}
               >
                 <option value="dev">Software Developer</option>
                 <option value="manager">Project Manager</option>
-                <option value="admin">System Administrator</option>
               </select>
             </div>
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all duration-300 shadow-2xl shadow-indigo-500/25 active:scale-[0.98] disabled:opacity-50 group mt-4"
+              className="w-full py-3 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex justify-center items-center gap-2 mt-2"
             >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  Initialize Profile
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </>
-              )}
+              {isLoading ? <Loader2 className="animate-spin" size={16} /> : <>Create Account <ArrowRight size={16} /></>}
             </button>
           </form>
+
+          <p className="text-center text-gray-400 text-sm mt-5">
+            Already have an account?{' '}
+            <Link to="/login" className="text-purple-500 hover:underline font-medium">Sign In</Link>
+          </p>
         </div>
 
-        <p className="text-center mt-8 text-slate-500 font-medium tracking-tight">
-          Already registered?{' '}
-          <Link to="/login" className="text-white font-black hover:text-indigo-400 transition-colors underline decoration-white/10 underline-offset-4 decoration-2">
-            Authenticate Access
-          </Link>
-        </p>
+        {/* RIGHT — purple accent panel, mirrors Login */}
+        <div className="hidden md:flex w-[42%] relative items-center justify-center text-white">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-l-[120px]" />
+          <div className="relative z-10 text-center px-10">
+            <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-5 shadow-xl">
+              <Bug className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold mb-3">Welcome!</h2>
+            <p className="text-purple-100 text-sm leading-relaxed">
+              Register to report bugs, manage tasks, and collaborate with your team.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

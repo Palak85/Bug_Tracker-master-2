@@ -70,4 +70,30 @@ class AuthController extends Controller
             'message' => 'Successfully logged out.',
         ]);
     }
+
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name'             => 'required|string|max:255',
+            'email'            => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'current_password' => 'nullable|string',
+            'password'         => 'nullable|string|min:8|confirmed',
+        ]);
+
+        // If user wants to change password, verify current password first
+        if (!empty($validated['password'])) {
+            if (empty($validated['current_password']) || !Hash::check($validated['current_password'], $user->password)) {
+                return response()->json(['message' => 'Current password is incorrect.'], 422);
+            }
+            $user->password = Hash::make($validated['password']);
+        }
+
+        $user->name  = $validated['name'];
+        $user->email = $validated['email'];
+        $user->save();
+
+        return response()->json(['user' => $user]);
+    }
 }
