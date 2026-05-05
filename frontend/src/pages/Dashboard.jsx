@@ -87,10 +87,10 @@ export default function Dashboard() {
 
   const items = activeTab === 'bugs' ? bugs : tasks;
   const filteredItems = items.filter(item =>
-    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.project?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category?.toLowerCase().includes(searchQuery.toLowerCase())
+    (item.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.project || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.category || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getPriorityStyle = (p) => {
@@ -376,7 +376,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <span className={`text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${getStatusStyle(item.status)}`}>
-                    {item.status.replace('_', ' ')}
+                    {(item.status || '').replace('_', ' ')}
                   </span>
                 </div>
 
@@ -396,7 +396,7 @@ export default function Dashboard() {
                   </div>
                   <span className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${getPriorityStyle(item.priority)}`}>
                     <Clock className="w-3 h-3" />
-                    {item.priority}
+                    {item.priority || 'none'}
                   </span>
                 </div>
               </div>
