@@ -15,6 +15,7 @@ import {
   Star,
 } from 'lucide-react';
 import ScrollExpandMedia from '../components/ui/scroll-expansion-hero';
+import { useDarkMode } from '../hooks/useDarkMode';
 
 /* ────────── reusable fade-in on scroll ────────── */
 const FadeIn = ({ children, delay = 0, className = '' }) => {
@@ -120,6 +121,7 @@ const stats = [
 
 /* ════════════════════════════ HOME PAGE ════════════════════════════ */
 export default function Home() {
+  useDarkMode(); // apply stored theme preference
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
   return (

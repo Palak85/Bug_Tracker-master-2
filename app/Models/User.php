@@ -27,6 +27,7 @@ class User extends Authenticatable
         'password',
         'role',
         'is_approved',
+        'notifications_read_at',
     ];
 
     /**
@@ -47,9 +48,10 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'is_approved' => 'boolean',
+            'email_verified_at'       => 'datetime',
+            'password'                => 'hashed',
+            'is_approved'             => 'boolean',
+            'notifications_read_at'   => 'datetime',
         ];
     }
 

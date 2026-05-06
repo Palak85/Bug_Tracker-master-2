@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Loader2, Trash2, AlertCircle, Calendar } from 'lucide-react';
 import api from '../services/api';
 import CommentsSection from './CommentsSection';
+import ConfirmModal from './ConfirmModal';
 
 const labelCls  = 'block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5';
 const inputCls  = 'w-full bg-[#f3f5f9] border border-gray-200 rounded-2xl px-4 py-3 text-gray-700 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed';
@@ -14,6 +15,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [confirmState, setConfirmState] = useState(null);
 
   useEffect(() => {
     if (task) {
@@ -47,11 +49,18 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this task?')) return;
-    setIsSubmitting(true);
-    try { await api.delete(`/tasks/${task.id}`); onSave(); onClose(); }
-    catch (err) { setError(err.response?.data?.message || 'Failed to delete task'); }
-    finally { setIsSubmitting(false); }
+    setConfirmState({
+      title: 'Delete Task',
+      message: `Permanently delete task #${task.id}? This will also remove all comments. This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      variant: 'danger',
+      onConfirm: async () => {
+        setIsSubmitting(true);
+        try { await api.delete(`/tasks/${task.id}`); onSave(); onClose(); }
+        catch (err) { setError(err.response?.data?.message || 'Failed to delete task'); }
+        finally { setIsSubmitting(false); }
+      },
+    });
   };
 
   const canDelete = task && currentUser && (currentUser.role === 'admin' || currentUser.id === task.created_by);
@@ -182,6 +191,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
           )}
         </div>
       </div>
+      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>
   );
 }

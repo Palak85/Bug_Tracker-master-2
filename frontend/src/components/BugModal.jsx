@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Loader2, Trash2, AlertCircle, Paperclip, ExternalLink } from 'lucide-react';
 import api from '../services/api';
 import CommentsSection from './CommentsSection';
+import ConfirmModal from './ConfirmModal';
 
 /* Shared field styles — match login page inputs */
 const labelCls  = 'block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5';
@@ -16,6 +17,7 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
   const [attachment, setAttachment] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [confirmState, setConfirmState] = useState(null);
 
   useEffect(() => {
     if (bug) {
@@ -71,11 +73,18 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to permanently delete this bug?')) return;
-    setIsSubmitting(true);
-    try { await api.delete(`/bugs/${bug.id}`); onSave(); onClose(); }
-    catch (err) { setError(err.response?.data?.message || 'Failed to delete bug'); }
-    finally { setIsSubmitting(false); }
+    setConfirmState({
+      title: 'Delete Bug Report',
+      message: `Permanently delete bug #${bug.id}? This will also remove all attachments and comments. This cannot be undone.`,
+      confirmLabel: 'Delete',
+      variant: 'danger',
+      onConfirm: async () => {
+        setIsSubmitting(true);
+        try { await api.delete(`/bugs/${bug.id}`); onSave(); onClose(); }
+        catch (err) { setError(err.response?.data?.message || 'Failed to delete bug'); }
+        finally { setIsSubmitting(false); }
+      },
+    });
   };
 
   const canDelete = bug && currentUser && (currentUser.role === 'admin' || currentUser.id === bug.created_by);
@@ -241,6 +250,7 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
           )}
         </div>
       </div>
+      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>
   );
 }

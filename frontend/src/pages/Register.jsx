@@ -2,8 +2,11 @@ import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Bug, ArrowRight, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useDarkMode } from '../hooks/useDarkMode';
 
 export default function Register() {
+  useDarkMode(); // apply stored theme preference
   const { register } = useContext(AuthContext);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -28,9 +31,12 @@ export default function Register() {
     setIsLoading(true);
     try {
       const response = await register(formData.name, formData.email, formData.password, formData.password_confirmation, formData.role);
+      toast.success('Account created! Awaiting admin approval.');
       navigate('/login', { state: { message: response.message } });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to register');
+      const msg = err.response?.data?.message || 'Failed to register';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }

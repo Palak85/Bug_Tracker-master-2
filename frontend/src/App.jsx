@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useContext } from 'react';
 import { AuthProvider, AuthContext } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
+import { Toaster } from 'react-hot-toast';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -45,11 +47,34 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
+    <ErrorBoundary>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3500,
+          style: {
+            borderRadius: '16px',
+            background: '#fff',
+            color: '#1f2937',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+            fontFamily: 'Plus Jakarta Sans, sans-serif',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+          },
+          success: {
+            iconTheme: { primary: '#8b5cf6', secondary: '#fff' },
+          },
+          error: {
+            iconTheme: { primary: '#f43f5e', secondary: '#fff' },
+          },
+        }}
+      />
+      <AuthProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

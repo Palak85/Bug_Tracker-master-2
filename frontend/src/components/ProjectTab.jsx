@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Plus, Layout, User, Clock, Loader2, AlertCircle, Trash2 } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 
 export default function ProjectTab({ onUpdate }) {
   const [projects, setProjects] = useState([]);
@@ -10,6 +11,8 @@ export default function ProjectTab({ onUpdate }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '', status: 'active', manager_id: '' });
   const [error, setError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [confirmState, setConfirmState] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -47,15 +50,22 @@ export default function ProjectTab({ onUpdate }) {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure? This will not delete bugs but will remove their project link.')) return;
-    try {
-      await api.delete(`/projects/${id}`);
-      fetchData();
-      if (onUpdate) onUpdate();
-    } catch (err) {
-      alert('Failed to delete project');
-    }
+  const handleDelete = async (id, name) => {
+    setConfirmState({
+      title: 'Delete Project',
+      message: `Delete "${name}"? This will not delete its bugs and tasks, but will remove their project link.`,
+      confirmLabel: 'Delete Project',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/projects/${id}`);
+          fetchData();
+          if (onUpdate) onUpdate();
+        } catch (err) {
+          setDeleteError('Failed to delete project. Please try again.');
+        }
+      },
+    });
   };
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-purple-600" /></div>;
@@ -71,6 +81,13 @@ export default function ProjectTab({ onUpdate }) {
           <Plus size={18} /> New Project
         </button>
       </div>
+
+      {deleteError && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-sm flex items-center gap-2">
+          <AlertCircle size={14} /> {deleteError}
+          <button onClick={() => setDeleteError('')} className="ml-auto text-red-400 hover:text-red-600">✕</button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {projects.length === 0 ? (
@@ -91,7 +108,7 @@ export default function ProjectTab({ onUpdate }) {
                   }`}>
                     {project.status}
                   </span>
-                  <button onClick={() => handleDelete(project.id)} className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-rose-500 transition-all">
+                  <button onClick={() => handleDelete(project.id, project.name)} className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-rose-500 transition-all">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -154,6 +171,7 @@ export default function ProjectTab({ onUpdate }) {
           </div>
         </div>
       )}
+      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>
   );
 }

@@ -4,13 +4,17 @@ use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BugController;
 use App\Http\Controllers\Api\CommentController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\StatsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+// Auth routes — rate limited to 10 requests/min per IP to prevent brute-force
+Route::middleware('throttle:10,1')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login',    [AuthController::class, 'login']);
+});
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
@@ -30,9 +34,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('comments', CommentController::class)->only(['index', 'store', 'destroy']);
     Route::get('/activities', ActivityController::class);
     Route::get('/stats', StatsController::class);
+
+    // Notifications
+    Route::get('/notifications',             [NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count',[NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/mark-read',  [NotificationController::class, 'markRead']);
     
     // Admin Routes
     Route::get('/admin/users', [\App\Http\Controllers\Api\AdminController::class, 'index']);
     Route::patch('/admin/users/{user}/approve', [\App\Http\Controllers\Api\AdminController::class, 'approve']);
     Route::delete('/admin/users/{user}', [\App\Http\Controllers\Api\AdminController::class, 'destroy']);
 });
+

@@ -1,14 +1,18 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
-import { LogOut, Bug, Plus, Search, Filter, CheckSquare, Clock, AlertCircle, Loader2, Users, Shield, Zap, Target, TrendingUp, Paperclip } from 'lucide-react';
+import { LogOut, Bug, Plus, Search, Filter, CheckSquare, Clock, AlertCircle, Loader2, Users, Shield, Zap, Target, TrendingUp, Paperclip, Menu, X } from 'lucide-react';
 import BugModal from '../components/BugModal';
 import TaskModal from '../components/TaskModal';
 import ProfileModal from '../components/ProfileModal';
 import StatsTab from '../components/StatsTab';
 import ActivityFeed from '../components/ActivityFeed';
 import ProjectTab from '../components/ProjectTab';
+import ConfirmModal from '../components/ConfirmModal';
+import NotificationPanel from '../components/NotificationPanel';
 import { Layout } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { usePolling } from '../hooks/usePolling';
 
 export default function Dashboard() {
   const { user, logout } = useContext(AuthContext);
@@ -28,28 +32,25 @@ export default function Dashboard() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filters, setFilters] = useState({ status: '', priority: '', severity: '', project_id: '' });
+  const [confirmState, setConfirmState] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Debounce the search so we don't fire on every keystroke
   useEffect(() => {
     const timer = setTimeout(() => { setDebouncedSearch(searchQuery); setPage(1); }, 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  useEffect(() => {
-    fetchData();
-    if (user?.role === 'admin' && activeTab === 'users') fetchAdminUsers();
-  }, [activeTab, user, filters, debouncedSearch, page]);
-
-  const fetchData = async () => {
+  // Wrap fetchData in useCallback so usePolling can reference a stable identity
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [usersRes, projectsRes] = await Promise.all([
         api.get('/users'),
         api.get('/projects')
       ]);
-      
       setUsers(Array.isArray(usersRes.data) ? usersRes.data : usersRes.data.data || []);
       setProjects(projectsRes.data || []);
-
       if (activeTab === 'bugs') {
         const bugsRes = await api.get('/bugs', { params: { ...filters, search: debouncedSearch, page } });
         setBugs(bugsRes.data.data || []);
@@ -64,9 +65,17 @@ export default function Dashboard() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeTab, filters, debouncedSearch, page]);
+
+  // Auto-refresh every 30s — fires immediately on mount too
+  usePolling(fetchData, 30_000);
+
+  useEffect(() => {
+    if (user?.role === 'admin' && activeTab === 'users') fetchAdminUsers();
+  }, [activeTab, user]);
 
   const handleFilterChange = (f, val) => { setFilters({ ...filters, [f]: val }); setPage(1); };
+
 
   const fetchAdminUsers = async () => {
     try { const res = await api.get('/admin/users'); setAdminUsers(res.data); }
@@ -74,14 +83,39 @@ export default function Dashboard() {
   };
 
   const handleApprove = async (id) => {
-    try { await api.patch(`/admin/users/${id}/approve`); fetchAdminUsers(); }
-    catch { alert('Failed to approve user'); }
+    setConfirmState({
+      title: 'Approve User',
+      message: 'Grant this user access to BugFinder? They will be able to log in immediately.',
+      confirmLabel: 'Approve',
+      variant: 'warning',
+      onConfirm: async () => {
+        try {
+          await api.patch(`/admin/users/${id}/approve`);
+          fetchAdminUsers();
+          toast.success('User approved successfully.');
+        } catch {
+          toast.error('Failed to approve user.');
+        }
+      },
+    });
   };
 
   const handleReject = async (id) => {
-    if (!confirm('Are you sure you want to remove this user?')) return;
-    try { await api.delete(`/admin/users/${id}`); fetchAdminUsers(); }
-    catch { alert('Failed to remove user'); }
+    setConfirmState({
+      title: 'Remove User',
+      message: 'This will permanently remove the user from the system. This action cannot be undone.',
+      confirmLabel: 'Remove',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/admin/users/${id}`);
+          fetchAdminUsers();
+          toast.success('User removed.');
+        } catch {
+          toast.error('Failed to remove user.');
+        }
+      },
+    });
   };
 
   const handleCreateNew = () => {
@@ -139,11 +173,16 @@ export default function Dashboard() {
     ...(user?.role === 'admin' ? [{ id: 'users', icon: Users, label: 'Team Access' }] : []),
   ];
 
+  const totalItems = activeTab === 'bugs' ? bugs.length : tasks.length;
+  const criticalCount  = filteredItems.filter(i => i.priority === 'urgent' || i.priority === 'high').length;
+  const activeCount    = filteredItems.filter(i => i.status === 'in_progress').length;
+  const resolvedCount  = filteredItems.filter(i => i.status === 'resolved' || i.status === 'closed').length;
+
   const stats = [
-    { label: 'Total',    value: activeTab === 'bugs' ? bugs.length : tasks.length, color: 'text-purple-600', icon: Zap },
-    { label: 'Critical', value: filteredItems.filter(i => i.priority === 'urgent' || i.priority === 'high').length, color: 'text-rose-500', icon: AlertCircle },
-    { label: 'Active',   value: filteredItems.filter(i => i.status === 'in_progress').length, color: 'text-indigo-600', icon: Target },
-    { label: 'Resolved', value: filteredItems.filter(i => i.status === 'resolved' || i.status === 'closed').length, color: 'text-emerald-600', icon: CheckSquare },
+    { label: 'Total',    value: totalItems,     pct: 100,                                        color: 'text-purple-600', icon: Zap        },
+    { label: 'Critical', value: criticalCount,  pct: totalItems ? Math.round(criticalCount  / totalItems * 100) : 0, color: 'text-rose-500',   icon: AlertCircle },
+    { label: 'Active',   value: activeCount,    pct: totalItems ? Math.round(activeCount    / totalItems * 100) : 0, color: 'text-indigo-600', icon: Target      },
+    { label: 'Resolved', value: resolvedCount,  pct: totalItems ? Math.round(resolvedCount  / totalItems * 100) : 0, color: 'text-emerald-600',icon: CheckSquare },
   ];
 
   return (
@@ -152,8 +191,18 @@ export default function Dashboard() {
       <div className="absolute w-[600px] h-[600px] bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full blur-[160px] top-[-200px] left-[-200px] opacity-25 pointer-events-none z-0" />
       <div className="absolute w-[500px] h-[500px] bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full blur-[160px] bottom-[-200px] right-[-200px] opacity-25 pointer-events-none z-0" />
 
+      {/* ── MOBILE SIDEBAR BACKDROP ── */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-20 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* ── SIDEBAR ── */}
-      <aside className="relative z-10 w-72 bg-white shadow-[4px_0_30px_rgba(0,0,0,0.08)] flex flex-col">
+      <aside className={`fixed lg:relative z-30 lg:z-10 w-72 bg-white shadow-[4px_0_30px_rgba(0,0,0,0.08)] flex flex-col h-full transition-transform duration-300 ${
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
         {/* Logo */}
         <div className="px-8 pt-8 pb-6">
           <div className="flex items-center gap-3 mb-10">
@@ -215,8 +264,28 @@ export default function Dashboard() {
       </aside>
 
       {/* ── MAIN ── */}
-      <main className="flex-1 overflow-y-auto relative z-10 p-8 lg:p-10">
+      <main className="flex-1 overflow-y-auto relative z-10 p-5 lg:p-10">
 
+        {/* Mobile header row — hamburger + page title + bell */}
+        <div className="flex items-center gap-3 mb-6 lg:hidden">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-all"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <span className="text-lg font-bold text-gray-800 capitalize flex-1">{activeTab.replace('_', ' ')}</span>
+          <NotificationPanel />
+        </div>
+
+        {/* Desktop header — bell + live indicator (hidden on mobile) */}
+        <div className="hidden lg:flex items-center justify-end gap-3 mb-6">
+          <span className="flex items-center gap-1.5 text-[10px] text-emerald-500 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full">
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+            Live · 30s
+          </span>
+          <NotificationPanel />
+        </div>
         {/* Stat cards — hidden on analytics/activity to avoid clutter */}
         {['bugs', 'tasks', 'users'].includes(activeTab) && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -228,7 +297,10 @@ export default function Dashboard() {
                 </div>
                 <p className={`text-4xl font-bold ${s.color}`}>{s.value}</p>
                 <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full w-2/3" />
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full transition-all duration-700"
+                    style={{ width: `${s.pct}%` }}
+                  />
                 </div>
               </div>
             ))}
@@ -465,6 +537,7 @@ export default function Dashboard() {
       <BugModal isOpen={isBugModalOpen} onClose={() => setIsBugModalOpen(false)} bug={selectedItem} onSave={fetchData} users={users} projects={projects} currentUser={user} />
       <TaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} task={selectedItem} onSave={fetchData} users={users} projects={projects} currentUser={user} />
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
+      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>
   );
 }

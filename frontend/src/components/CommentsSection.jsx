@@ -1,7 +1,8 @@
 import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
-import { Send, Trash2, User, Clock, Loader2 } from 'lucide-react';
+import { Send, Trash2, User, Clock, Loader2, AlertCircle } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 
 export default function CommentsSection({ bugId, taskId }) {
   const { user } = useContext(AuthContext);
@@ -9,6 +10,8 @@ export default function CommentsSection({ bugId, taskId }) {
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [postError, setPostError] = useState('');
+  const [confirmState, setConfirmState] = useState(null);
 
   useEffect(() => {
     fetchComments();
@@ -30,7 +33,7 @@ export default function CommentsSection({ bugId, taskId }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
-
+    setPostError('');
     setIsSubmitting(true);
     try {
       const payload = {
@@ -43,21 +46,28 @@ export default function CommentsSection({ bugId, taskId }) {
       setNewComment('');
     } catch (err) {
       console.error('Failed to post comment', err);
-      alert('Failed to post comment');
+      setPostError('Failed to post comment. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this comment?')) return;
-    try {
-      await api.delete(`/comments/${id}`);
-      setComments(comments.filter(c => c.id !== id));
-    } catch (err) {
-      console.error('Failed to delete comment', err);
-      alert('Failed to delete comment');
-    }
+    setConfirmState({
+      title: 'Delete Comment',
+      message: 'Permanently delete this comment? This cannot be undone.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/comments/${id}`);
+          setComments(comments.filter(c => c.id !== id));
+        } catch (err) {
+          console.error('Failed to delete comment', err);
+          setPostError('Failed to delete comment. Please try again.');
+        }
+      },
+    });
   };
 
   const formatDate = (dateString) => {
@@ -76,6 +86,11 @@ export default function CommentsSection({ bugId, taskId }) {
 
       {/* New Comment Input */}
       <form onSubmit={handleSubmit} className="mb-8">
+        {postError && (
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-2xl mb-3 text-xs flex items-center gap-2">
+            <AlertCircle size={13} /> {postError}
+          </div>
+        )}
         <div className="relative group">
           <textarea
             className="w-full bg-[#f3f5f9] border border-gray-200 rounded-2xl px-5 py-4 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400/40 transition-all resize-none pr-14"
@@ -142,6 +157,7 @@ export default function CommentsSection({ bugId, taskId }) {
           ))
         )}
       </div>
+      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>
   );
 }
