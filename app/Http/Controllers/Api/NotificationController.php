@@ -50,22 +50,22 @@ class NotificationController extends Controller
                 });
             })
             ->latest()
-            ->limit(15)
-            ->get()
-            ->map(function ($activity) use ($user) {
-                return [
-                    'id'          => $activity->id,
-                    'type'        => $activity->type,
-                    'action'      => $activity->action,
-                    'description' => $activity->description,
-                    'subject_id'  => $activity->subject_id,
-                    'actor'       => $activity->user?->name ?? 'Someone',
-                    'actor_role'  => $activity->user?->role ?? '',
-                    'is_unread'   => $user->notifications_read_at === null
-                                     || $activity->created_at->gt($user->notifications_read_at),
-                    'created_at'  => $activity->created_at,
-                ];
-            });
+            ->paginate(15);
+
+        $activities->getCollection()->transform(function ($activity) use ($user) {
+            return [
+                'id'          => $activity->id,
+                'type'        => $activity->type,
+                'action'      => $activity->action,
+                'description' => $activity->description,
+                'subject_id'  => $activity->subject_id,
+                'actor'       => $activity->user?->name ?? 'Someone',
+                'actor_role'  => $activity->user?->role ?? '',
+                'is_unread'   => $user->notifications_read_at === null
+                                 || $activity->created_at->gt($user->notifications_read_at),
+                'created_at'  => $activity->created_at,
+            ];
+        });
 
         return response()->json($activities);
     }

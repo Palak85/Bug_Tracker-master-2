@@ -53,7 +53,7 @@ export default function NotificationPanel() {
         api.get('/notifications'),
         api.get('/notifications/unread-count'),
       ]);
-      setNotifications(notifRes.data);
+      setNotifications(notifRes.data.data || []);
       setUnreadCount(countRes.data.count ?? 0);
     } catch {
       // Silently fail — this is a non-critical feature

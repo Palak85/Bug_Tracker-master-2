@@ -41,8 +41,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/notifications/mark-read',  [NotificationController::class, 'markRead']);
     
     // Admin Routes
-    Route::get('/admin/users', [\App\Http\Controllers\Api\AdminController::class, 'index']);
-    Route::patch('/admin/users/{user}/approve', [\App\Http\Controllers\Api\AdminController::class, 'approve']);
-    Route::delete('/admin/users/{user}', [\App\Http\Controllers\Api\AdminController::class, 'destroy']);
+    Route::middleware('admin')->group(function () {
+        Route::get('/admin/users', [\App\Http\Controllers\Api\AdminController::class, 'index']);
+        Route::patch('/admin/users/{user}/approve', [\App\Http\Controllers\Api\AdminController::class, 'approve']);
+        Route::delete('/admin/users/{user}', [\App\Http\Controllers\Api\AdminController::class, 'destroy']);
+    });
 });
 

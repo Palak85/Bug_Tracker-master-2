@@ -14,10 +14,6 @@ class AdminController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
         $users = User::latest()->get();
         return response()->json($users);
     }
@@ -27,10 +23,6 @@ class AdminController extends Controller
      */
     public function approve(Request $request, User $user): JsonResponse
     {
-        if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
         $user->update(['is_approved' => true]);
 
         return response()->json(['message' => 'User approved successfully.', 'user' => $user]);
@@ -41,10 +33,6 @@ class AdminController extends Controller
      */
     public function destroy(Request $request, User $user): JsonResponse
     {
-        if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
         if ($user->id === $request->user()->id) {
             return response()->json(['message' => 'Cannot delete yourself'], 400);
         }

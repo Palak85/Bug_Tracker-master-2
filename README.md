@@ -77,6 +77,12 @@ php artisan serve
 ```bash
 # From the frontend directory
 npm run dev
+
+# Setup frontend environment variables
+cp .env.example .env
+```
+> [!IMPORTANT]
+> Ensure the `VITE_API_URL` in `frontend/.env` matches your Laravel backend URL (default: `http://localhost:8000/api`).
 ```
 *(The frontend will run at http://localhost:5173)*
 
@@ -86,3 +92,4 @@ If you ran the database seeder (`php artisan db:seed`), you can log in to the Re
 
 - **Email:** `admin@example.com`
 - **Password:** `password`
+
