@@ -41,4 +41,41 @@ class AdminController extends Controller
 
         return response()->json(['message' => 'User deleted successfully.']);
     }
+    /**
+     * Export all bugs to CSV.
+     */
+    public function exportBugs(): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $bugs = \App\Models\Bug::with(['project', 'creator', 'assignee'])->latest()->get();
+        
+        $headers = [
+            'Content-type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename=bug_reports_' . date('Y-m-d') . '.csv',
+            'Pragma'              => 'no-cache',
+            'Cache-Control'       => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires'             => '0'
+        ];
+
+        $columns = ['ID', 'Title', 'Project', 'Status', 'Priority', 'Severity', 'Created By', 'Assigned To', 'Created At'];
+
+        return response()->stream(function() use($bugs, $columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+
+            foreach ($bugs as $bug) {
+                fputcsv($file, [
+                    $bug->id,
+                    $bug->title,
+                    $bug->project?->name ?? 'N/A',
+                    strtoupper($bug->status),
+                    strtoupper($bug->priority),
+                    strtoupper($bug->severity),
+                    $bug->creator?->name ?? 'N/A',
+                    $bug->assignee?->name ?? 'N/A',
+                    $bug->created_at->toDateTimeString()
+                ]);
+            }
+            fclose($file);
+        }, 200, $headers);
+    }
 }

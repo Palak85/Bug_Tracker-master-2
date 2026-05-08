@@ -17,13 +17,14 @@ class AuthController extends Controller
             'name'     => 'required|string|max:255',
             'email'    => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
+            'role'     => 'nullable|string|in:dev,manager', // Allow dev or manager roles
         ]);
 
         $user = User::create([
             'name'     => $validated['name'],
             'email'    => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role'     => 'dev',
+            'role'     => $validated['role'] ?? 'dev', // Default to 'dev' if not specified
         ]);
 
         return response()->json([

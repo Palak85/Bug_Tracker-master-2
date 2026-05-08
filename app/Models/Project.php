@@ -16,8 +16,15 @@ class Project extends Model
         'name',
         'description',
         'status',
+        'start_date',
+        'end_date',
         'manager_id',
     ];
+
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(Milestone::class);
+    }
 
     public function manager(): BelongsTo
     {

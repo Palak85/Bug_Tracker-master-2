@@ -14,6 +14,7 @@ class TaskObserver
     {
         Activity::create([
             'user_id'     => auth()->id() ?? $task->created_by,
+            'project_id'  => $task->project_id,
             'type'        => 'task',
             'subject_id'  => $task->id,
             'action'      => 'created',
@@ -29,14 +30,27 @@ class TaskObserver
         if ($task->isDirty('status')) {
             Activity::create([
                 'user_id'     => auth()->id(),
+                'project_id'  => $task->project_id,
                 'type'        => 'task',
                 'subject_id'  => $task->id,
                 'action'      => 'status_change',
                 'description' => "Changed status of '{$task->title}' to " . strtoupper(str_replace('_', ' ', $task->status)),
             ]);
+        } elseif ($task->isDirty('assigned_to')) {
+            $task->load('assignee');
+            $assigneeName = $task->assignee ? $task->assignee->name : 'Unassigned';
+            Activity::create([
+                'user_id'     => auth()->id(),
+                'project_id'  => $task->project_id,
+                'type'        => 'task',
+                'subject_id'  => $task->id,
+                'action'      => 'assigned',
+                'description' => "Assigned task '{$task->title}' to {$assigneeName}",
+            ]);
         } else {
             Activity::create([
                 'user_id'     => auth()->id(),
+                'project_id'  => $task->project_id,
                 'type'        => 'task',
                 'subject_id'  => $task->id,
                 'action'      => 'updated',
@@ -52,6 +66,7 @@ class TaskObserver
     {
         Activity::create([
             'user_id'     => auth()->id(),
+            'project_id'  => $task->project_id,
             'type'        => 'task',
             'subject_id'  => $task->id,
             'action'      => 'deleted',

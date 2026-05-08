@@ -23,9 +23,10 @@ export default function ActivityFeed() {
 
   const getIcon = (action, type) => {
     if (action === 'deleted') return <Trash2 className="text-rose-500" size={14} />;
-    if (action === 'status_change') return <Edit3 className="text-amber-500" size={14} />;
+    if (action === 'status_change' || action === 'assigned') return <Edit3 className="text-amber-500" size={14} />;
     if (type === 'bug') return <Bug className="text-purple-500" size={14} />;
     if (type === 'task') return <CheckCircle className="text-indigo-500" size={14} />;
+    if (type === 'comment') return <Clock className="text-blue-500" size={14} />;
     return <Clock className="text-gray-400" size={14} />;
   };
 
@@ -73,12 +74,19 @@ export default function ActivityFeed() {
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 leading-relaxed">{activity.description}</p>
-                  <div className="mt-2 flex items-center gap-2">
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
                     <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md ${
-                      activity.type === 'bug' ? 'bg-purple-50 text-purple-600' : 'bg-indigo-50 text-indigo-600'
+                      activity.type === 'bug' ? 'bg-purple-50 text-purple-600' : 
+                      activity.type === 'task' ? 'bg-indigo-50 text-indigo-600' :
+                      'bg-blue-50 text-blue-600'
                     }`}>
                       {activity.type}
                     </span>
+                    {activity.project && (
+                      <span className="text-[10px] font-bold bg-gray-50 text-gray-500 px-2 py-0.5 rounded-md">
+                        {activity.project.name}
+                      </span>
+                    )}
                     <span className="text-[10px] text-gray-400">ID: #{activity.subject_id}</span>
                   </div>
                 </div>

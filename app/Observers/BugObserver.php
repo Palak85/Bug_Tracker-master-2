@@ -14,6 +14,7 @@ class BugObserver
     {
         Activity::create([
             'user_id'     => auth()->id() ?? $bug->created_by,
+            'project_id'  => $bug->project_id,
             'type'        => 'bug',
             'subject_id'  => $bug->id,
             'action'      => 'created',
@@ -29,14 +30,27 @@ class BugObserver
         if ($bug->isDirty('status')) {
             Activity::create([
                 'user_id'     => auth()->id(),
+                'project_id'  => $bug->project_id,
                 'type'        => 'bug',
                 'subject_id'  => $bug->id,
                 'action'      => 'status_change',
                 'description' => "Changed status of '{$bug->title}' to " . strtoupper(str_replace('_', ' ', $bug->status)),
             ]);
+        } elseif ($bug->isDirty('assigned_to')) {
+            $bug->load('assignee');
+            $assigneeName = $bug->assignee ? $bug->assignee->name : 'Unassigned';
+            Activity::create([
+                'user_id'     => auth()->id(),
+                'project_id'  => $bug->project_id,
+                'type'        => 'bug',
+                'subject_id'  => $bug->id,
+                'action'      => 'assigned',
+                'description' => "Assigned bug '{$bug->title}' to {$assigneeName}",
+            ]);
         } else {
             Activity::create([
                 'user_id'     => auth()->id(),
+                'project_id'  => $bug->project_id,
                 'type'        => 'bug',
                 'subject_id'  => $bug->id,
                 'action'      => 'updated',
@@ -52,6 +66,7 @@ class BugObserver
     {
         Activity::create([
             'user_id'     => auth()->id(),
+            'project_id'  => $bug->project_id,
             'type'        => 'bug',
             'subject_id'  => $bug->id,
             'action'      => 'deleted',

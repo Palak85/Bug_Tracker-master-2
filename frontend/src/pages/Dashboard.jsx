@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
-import { LogOut, Bug, Plus, Search, Filter, CheckSquare, Clock, AlertCircle, Loader2, Users, Shield, Zap, Target, TrendingUp, Paperclip, Menu, X } from 'lucide-react';
+import { LogOut, Bug, Plus, Search, Filter, CheckSquare, Clock, AlertCircle, Loader2, Users, Shield, Zap, Target, TrendingUp, Paperclip, Menu, X, ArrowRight } from 'lucide-react';
 import BugModal from '../components/BugModal';
 import TaskModal from '../components/TaskModal';
 import ProfileModal from '../components/ProfileModal';
@@ -10,6 +10,7 @@ import ActivityFeed from '../components/ActivityFeed';
 import ProjectTab from '../components/ProjectTab';
 import ConfirmModal from '../components/ConfirmModal';
 import NotificationPanel from '../components/NotificationPanel';
+import KanbanBoard from '../components/KanbanBoard';
 import { Layout } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePolling } from '../hooks/usePolling';
@@ -118,6 +119,35 @@ export default function Dashboard() {
     });
   };
 
+  const handleExportCsv = async () => {
+    try {
+      const response = await api.get('/admin/export-bugs', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `bug_reports_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Report downloaded');
+    } catch (err) {
+      toast.error('Failed to export report');
+    }
+  };
+
+  const handleUpdateTaskStatus = async (taskId, data) => {
+    try {
+      await api.patch(`/tasks/${taskId}`, data);
+      toast.success('Task status updated');
+      fetchData(); // Refresh list
+    } catch (err) {
+      toast.error('Failed to update task status');
+      console.error(err);
+    }
+  };
+
+
+
   const handleCreateNew = () => {
     setSelectedItem(null);
     if (activeTab === 'bugs') setIsBugModalOpen(true);
@@ -165,10 +195,10 @@ export default function Dashboard() {
   };
 
   const navItems = [
-    { id: 'projects',  icon: Layout,      label: 'Projects'     },
+    ...(user?.role !== 'dev' ? [{ id: 'projects',  icon: Layout,      label: 'Projects'     }] : []),
     { id: 'bugs',      icon: Bug,         label: 'Issues Log'   },
     { id: 'tasks',     icon: CheckSquare,  label: 'Sprint Board' },
-    { id: 'analytics', icon: TrendingUp,   label: 'Analytics'    },
+    ...(user?.role === 'admin' ? [{ id: 'analytics', icon: TrendingUp,   label: 'Analytics'    }] : []),
     { id: 'activity',  icon: Clock,        label: 'Activity Log' },
     ...(user?.role === 'admin' ? [{ id: 'users', icon: Users, label: 'Team Access' }] : []),
   ];
@@ -286,8 +316,8 @@ export default function Dashboard() {
           </span>
           <NotificationPanel />
         </div>
-        {/* Stat cards — hidden on analytics/activity to avoid clutter */}
-        {['bugs', 'tasks', 'users'].includes(activeTab) && (
+        {/* Stat cards — hidden on analytics/activity and for non-admin users */}
+        {user?.role === 'admin' && ['bugs', 'tasks'].includes(activeTab) && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
             {stats.map((s, i) => (
               <div key={i} className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.07)] p-5 flex flex-col gap-2 hover:-translate-y-1 transition-transform duration-300">
@@ -351,6 +381,16 @@ export default function Dashboard() {
                 <Plus className="w-4 h-4" />
                 New {activeTab === 'bugs' ? 'Bug' : 'Task'}
               </button>
+
+              {user?.role === 'admin' && activeTab === 'bugs' && (
+                <button
+                  onClick={handleExportCsv}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all"
+                >
+                  <ArrowRight className="w-4 h-4 rotate-90" />
+                  Export CSV
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -371,11 +411,11 @@ export default function Dashboard() {
             ))}
           </div>
 
-        ) : activeTab === 'analytics' ? (
+        ) : activeTab === 'analytics' && user?.role === 'admin' ? (
           <StatsTab />
         ) : activeTab === 'activity' ? (
           <ActivityFeed />
-        ) : activeTab === 'projects' ? (
+        ) : activeTab === 'projects' && user?.role !== 'dev' ? (
           <ProjectTab onUpdate={fetchData} />
         ) : activeTab === 'users' ? (
           /* ── USERS TABLE ── */
@@ -451,8 +491,15 @@ export default function Dashboard() {
             <p className="text-gray-400 text-sm">No {activeTab} found matching your filters</p>
           </div>
 
+        ) : activeTab === 'tasks' ? (
+          <KanbanBoard 
+            tasks={tasks} 
+            onUpdate={handleUpdateTaskStatus} 
+            onEditTask={handleEdit}
+            isLoading={isLoading}
+          />
         ) : (
-          /* ── CARDS GRID ── */
+          /* ── CARDS GRID (Bugs) ── */
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
             {filteredItems.map(item => (
               <div

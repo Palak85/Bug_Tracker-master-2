@@ -4,8 +4,12 @@ namespace App\Providers;
 
 use App\Models\Bug;
 use App\Models\Task;
+use App\Models\Comment;
 use App\Observers\BugObserver;
 use App\Observers\TaskObserver;
+use App\Observers\CommentObserver;
+use App\Observers\MilestoneObserver;
+use App\Models\Milestone;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\ServiceProvider;
 
@@ -30,5 +34,7 @@ class AppServiceProvider extends ServiceProvider
 
         Bug::observe(BugObserver::class);
         Task::observe(TaskObserver::class);
+        Comment::observe(CommentObserver::class);
+        Milestone::observe(MilestoneObserver::class);
     }
 }

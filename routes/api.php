@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BugController;
 use App\Http\Controllers\Api\CommentController;
+use App\Http\Controllers\Api\MilestoneController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\StatsController;
@@ -29,19 +30,23 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     Route::apiResource('projects', ProjectController::class);
+    Route::apiResource('milestones', MilestoneController::class)->except(['index', 'show']);
     Route::apiResource('bugs', BugController::class);
     Route::apiResource('tasks', \App\Http\Controllers\TaskController::class);
     Route::apiResource('comments', CommentController::class)->only(['index', 'store', 'destroy']);
     Route::get('/activities', ActivityController::class);
-    Route::get('/stats', StatsController::class);
 
     // Notifications
     Route::get('/notifications',             [NotificationController::class, 'index']);
     Route::get('/notifications/unread-count',[NotificationController::class, 'unreadCount']);
     Route::post('/notifications/mark-read',  [NotificationController::class, 'markRead']);
     
+
+
     // Admin Routes
     Route::middleware('admin')->group(function () {
+        Route::get('/stats', StatsController::class);
+        Route::get('/admin/export-bugs', [\App\Http\Controllers\Api\AdminController::class, 'exportBugs']);
         Route::get('/admin/users', [\App\Http\Controllers\Api\AdminController::class, 'index']);
         Route::patch('/admin/users/{user}/approve', [\App\Http\Controllers\Api\AdminController::class, 'approve']);
         Route::delete('/admin/users/{user}', [\App\Http\Controllers\Api\AdminController::class, 'destroy']);

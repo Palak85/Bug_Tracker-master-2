@@ -14,7 +14,10 @@ class ProjectController extends Controller
      */
     public function index(): JsonResponse
     {
-        $projects = Project::with('manager:id,name')->latest()->get();
+        $projects = Project::with(['manager:id,name', 'milestones'])
+            ->withCount(['bugs', 'tasks'])
+            ->latest()
+            ->get();
         return response()->json($projects);
     }
 
@@ -31,12 +34,14 @@ class ProjectController extends Controller
             'name'        => 'required|string|max:255',
             'description' => 'nullable|string',
             'status'      => 'required|in:active,archived',
+            'start_date'  => 'nullable|date',
+            'end_date'    => 'nullable|date|after_or_equal:start_date',
             'manager_id'  => 'nullable|exists:users,id',
         ]);
 
         $project = Project::create($validated);
 
-        return response()->json($project, 201);
+        return response()->json($project->load('manager:id,name'), 201);
     }
 
     /**
@@ -44,7 +49,7 @@ class ProjectController extends Controller
      */
     public function show(Project $project): JsonResponse
     {
-        return response()->json($project->load(['manager:id,name', 'bugs', 'tasks']));
+        return response()->json($project->load(['manager:id,name', 'bugs', 'tasks', 'milestones']));
     }
 
     /**
@@ -60,12 +65,14 @@ class ProjectController extends Controller
             'name'        => 'string|max:255',
             'description' => 'nullable|string',
             'status'      => 'in:active,archived',
+            'start_date'  => 'nullable|date',
+            'end_date'    => 'nullable|date|after_or_equal:start_date',
             'manager_id'  => 'nullable|exists:users,id',
         ]);
 
         $project->update($validated);
 
-        return response()->json($project);
+        return response()->json($project->load('manager:id,name'));
     }
 
     /**
