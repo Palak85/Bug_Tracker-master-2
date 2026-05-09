@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2, Trash2, AlertCircle, Paperclip, ExternalLink } from 'lucide-react';
+import { X, Loader2, Trash2, AlertCircle, Paperclip, ExternalLink, Sparkles } from 'lucide-react';
 import api from '../services/api';
 import CommentsSection from './CommentsSection';
 import ConfirmModal from './ConfirmModal';
+import BugChatbot from './BugChatbot';
 
 /* Shared field styles — match login page inputs */
 const labelCls  = 'block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5';
@@ -18,6 +19,7 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [confirmState, setConfirmState] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     if (bug) {
@@ -98,11 +100,25 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
         ? (users || []).filter(u => u.role !== 'admin' && u.id !== currentUser.id)
         : [];
 
+  const handleApplySuggestion = ({ title, description, severity, category }) => {
+    setFormData(prev => ({
+      ...prev,
+      ...(title && { title }),
+      ...(description && { description }),
+      ...(severity && { severity }),
+      ...(category && { category }),
+    }));
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-gray-800/30 backdrop-blur-md" onClick={onClose} />
       
-      <div className="relative bg-white rounded-[30px] w-full max-w-2xl shadow-[0_25px_60px_rgba(0,0,0,0.2)] max-h-[90vh] overflow-y-auto">
+      <div className={`relative bg-white rounded-[30px] w-full shadow-[0_25px_60px_rgba(0,0,0,0.2)] max-h-[90vh] flex transition-all duration-500 ease-in-out ${
+        isChatOpen ? 'max-w-5xl' : 'max-w-2xl'
+      }`}>
+        {/* ── LEFT: Bug Form ── */}
+        <div className="flex flex-col flex-1 min-w-0 overflow-y-auto rounded-[30px]">
         <div className="sticky top-0 z-10 bg-white rounded-t-[30px] flex justify-between items-center px-8 py-6 border-b border-gray-100">
           <div>
             <h2 className="text-xl font-bold text-gray-800">
@@ -110,9 +126,25 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
             </h2>
             <p className="text-xs text-gray-400 mt-0.5">#{bug?.id || 'New'}</p>
           </div>
-          <button onClick={onClose} className="w-9 h-9 rounded-full bg-[#f3f5f9] flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-all">
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {canEditAll && (
+              <button
+                type="button"
+                onClick={() => setIsChatOpen(o => !o)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  isChatOpen
+                    ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md shadow-purple-200'
+                    : 'bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100'
+                }`}
+              >
+                <Sparkles className="w-3 h-3" />
+                {isChatOpen ? 'Hide AI' : '✦ AI Help'}
+              </button>
+            )}
+            <button onClick={onClose} className="w-9 h-9 rounded-full bg-[#f3f5f9] flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-all">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <div className="px-8 pb-8 pt-6">
@@ -131,9 +163,21 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
             </div>
 
             <div>
-              <label className={labelCls}>Description</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={labelCls} style={{ marginBottom: 0 }}>Description</label>
+                {canEditAll && (
+                  <button
+                    type="button"
+                    onClick={() => setIsChatOpen(o => !o)}
+                    className="flex items-center gap-1 text-[9px] font-bold text-purple-500 hover:text-purple-700 transition-colors uppercase tracking-widest"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {isChatOpen ? 'Close AI' : 'AI Help'}
+                  </button>
+                )}
+              </div>
               <textarea required rows={4} disabled={!canEditAll} className={`${inputCls} resize-none`}
-                placeholder="Steps to reproduce..."
+                placeholder="Steps to reproduce... (or use AI Help above!)"
                 value={formData.description} onChange={e => set('description', e.target.value)} />
             </div>
 
@@ -249,6 +293,22 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
             </div>
           )}
         </div>
+        </div>{/* end left panel */}
+
+        {/* ── RIGHT: AI Chatbot Panel ── */}
+        {isChatOpen && (
+          <div
+            className="w-80 xl:w-96 flex-shrink-0 flex flex-col animate-in slide-in-from-right-4 duration-300"
+            style={{ minHeight: '400px' }}
+          >
+            <BugChatbot
+              type="bug"
+              formData={formData}
+              onClose={() => setIsChatOpen(false)}
+              onApplySuggestion={handleApplySuggestion}
+            />
+          </div>
+        )}
       </div>
       <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>

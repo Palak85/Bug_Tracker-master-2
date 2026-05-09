@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MoreVertical, Plus, Clock, User, AlertCircle, ArrowRight } from 'lucide-react';
+import { MoreVertical, Plus, Clock, User, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const columns = [
@@ -65,6 +65,22 @@ export default function KanbanBoard({ tasks, onUpdate, onEditTask, isLoading }) 
               <span className="bg-white px-2 py-0.5 rounded-lg text-[10px] font-bold text-gray-400 shadow-sm border border-gray-100">
                 {tasks.filter(t => t.status === col.id).length}
               </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onEditTask(null)}
+                className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-all border border-gray-100"
+                title="Add Task"
+              >
+                <Plus size={14} />
+              </button>
+              <button
+                onClick={() => onEditTask(null)}
+                className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 shadow-md flex items-center justify-center text-white hover:scale-110 transition-all"
+                title="AI Task Helper"
+              >
+                <Sparkles size={12} />
+              </button>
             </div>
           </div>
 

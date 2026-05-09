@@ -3,6 +3,8 @@ import { X, Loader2, Trash2, AlertCircle, Calendar } from 'lucide-react';
 import api from '../services/api';
 import CommentsSection from './CommentsSection';
 import ConfirmModal from './ConfirmModal';
+import BugChatbot from './BugChatbot';
+import { Sparkles } from 'lucide-react';
 
 const labelCls  = 'block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5';
 const inputCls  = 'w-full bg-[#f3f5f9] border border-gray-200 rounded-2xl px-4 py-3 text-gray-700 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed';
@@ -16,6 +18,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [confirmState, setConfirmState] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -78,18 +81,36 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-gray-800/30 backdrop-blur-md" onClick={onClose} />
       
-      <div className="relative bg-white rounded-[30px] w-full max-w-2xl shadow-[0_25px_60px_rgba(0,0,0,0.2)] max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 z-10 bg-white rounded-t-[30px] flex justify-between items-center px-8 py-6 border-b border-gray-100">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">
-              {task ? (canEditAll ? 'Edit Task' : 'Update Status') : 'New Sprint Task'}
-            </h2>
-            <p className="text-xs text-gray-400 mt-0.5">#{task?.id || 'New'}</p>
+      <div className={`relative bg-white rounded-[30px] w-full transition-all duration-500 shadow-[0_25px_60px_rgba(0,0,0,0.2)] max-h-[90vh] overflow-hidden flex ${
+        isChatOpen ? 'max-w-5xl' : 'max-w-2xl'
+      }`}>
+        <div className="flex-1 overflow-y-auto flex flex-col">
+          <div className="sticky top-0 z-10 bg-white rounded-t-[30px] flex justify-between items-center px-8 py-6 border-b border-gray-100">
+            <div className="flex items-center gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">
+                  {task ? (canEditAll ? 'Edit Task' : 'Update Status') : 'New Sprint Task'}
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">#{task?.id || 'New'}</p>
+              </div>
+              
+              <button
+                type="button"
+                onClick={() => setIsChatOpen(!isChatOpen)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
+                  isChatOpen 
+                    ? 'bg-purple-100 text-purple-600 ring-2 ring-purple-200' 
+                    : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md'
+                }`}
+              >
+                <Sparkles className="w-3 h-3" />
+                {isChatOpen ? 'Hide AI' : '✦ AI Help'}
+              </button>
+            </div>
+            <button onClick={onClose} className="w-9 h-9 rounded-full bg-[#f3f5f9] flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-all">
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button onClick={onClose} className="w-9 h-9 rounded-full bg-[#f3f5f9] flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-all">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
 
         <div className="px-8 pb-8 pt-6">
           {error && (
@@ -107,7 +128,18 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
             </div>
 
             <div>
-              <label className={labelCls}>Detailed Description</label>
+              <div className="flex justify-between items-end mb-1.5">
+                <label className={labelCls + ' mb-0'}>Detailed Description</label>
+                {!isChatOpen && (
+                  <button
+                    type="button"
+                    onClick={() => setIsChatOpen(true)}
+                    className="flex items-center gap-1 text-[10px] font-bold text-purple-500 hover:text-purple-600"
+                  >
+                    <Sparkles size={10} /> AI Help
+                  </button>
+                )}
+              </div>
               <textarea required rows={3} disabled={!canEditAll} className={`${inputCls} resize-none`}
                 placeholder="Details, acceptance criteria..."
                 value={formData.description} onChange={e => set('description', e.target.value)} />
@@ -190,6 +222,27 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
             </div>
           )}
         </div>
+      </div>
+
+        {/* AI PANEL */}
+        {isChatOpen && (
+          <div className="w-[400px] border-l border-gray-100 bg-[#f8f9fc] animate-in slide-in-from-right duration-500">
+            <BugChatbot 
+              type="task"
+              onClose={() => setIsChatOpen(false)}
+              formData={formData}
+              onApplySuggestion={(suggestion) => {
+                setFormData(prev => ({
+                  ...prev,
+                  title: suggestion.title || prev.title,
+                  description: suggestion.description || prev.description,
+                  priority: suggestion.priority || prev.priority,
+                  category: suggestion.category || prev.category
+                }));
+              }}
+            />
+          </div>
+        )}
       </div>
       <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>
