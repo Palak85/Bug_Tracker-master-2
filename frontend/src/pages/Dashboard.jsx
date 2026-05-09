@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
-import { LogOut, Bug, Plus, Search, Filter, CheckSquare, Clock, AlertCircle, Loader2, Users, Shield, Zap, Target, TrendingUp, Paperclip, Menu, X, ArrowRight } from 'lucide-react';
+import { LogOut, Bug, Plus, Search, Filter, CheckSquare, Clock, AlertCircle, Loader2, Users, Shield, Zap, Target, TrendingUp, Paperclip, Menu, X, ArrowRight, Sparkles } from 'lucide-react';
 import BugModal from '../components/BugModal';
 import TaskModal from '../components/TaskModal';
 import ProfileModal from '../components/ProfileModal';
@@ -14,6 +14,8 @@ import KanbanBoard from '../components/KanbanBoard';
 import { Layout } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePolling } from '../hooks/usePolling';
+import BugChatbot from '../components/BugChatbot';
+import { MessageSquareText } from 'lucide-react';
 
 export default function Dashboard() {
   const { user, logout } = useContext(AuthContext);
@@ -35,6 +37,7 @@ export default function Dashboard() {
   const [filters, setFilters] = useState({ status: '', priority: '', severity: '', project_id: '' });
   const [confirmState, setConfirmState] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isFloatingChatOpen, setIsFloatingChatOpen] = useState(false);
 
   // Debounce the search so we don't fire on every keystroke
   useEffect(() => {
@@ -585,6 +588,59 @@ export default function Dashboard() {
       <TaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} task={selectedItem} onSave={fetchData} users={users} projects={projects} currentUser={user} />
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
       <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
+
+      {/* ── FLOATING AI ASSISTANT ── */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
+        {/* Chat Panel */}
+        {isFloatingChatOpen && (
+          <div className="w-[400px] h-[600px] bg-white rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 overflow-hidden flex flex-col animate-in slide-in-from-bottom-10 duration-500">
+            <BugChatbot 
+              type={activeTab === 'tasks' ? 'task' : 'bug'}
+              onClose={() => setIsFloatingChatOpen(false)}
+              formData={{}}
+              onApplySuggestion={(suggestion) => {
+                setSelectedItem(null);
+                if (activeTab === 'tasks' || (suggestion.type === 'task')) {
+                  // Pre-fill Task Modal logic would go here, 
+                  // but for now we just open the modal. 
+                  // We'll set the selectedItem to a "draft" state.
+                  setSelectedItem({ 
+                    ...suggestion, 
+                    isDraft: true,
+                    status: 'open',
+                    priority: suggestion.priority || 'medium'
+                  });
+                  setIsTaskModalOpen(true);
+                } else {
+                  setSelectedItem({ 
+                    ...suggestion, 
+                    isDraft: true,
+                    status: 'reported',
+                    severity: suggestion.severity || 'major'
+                  });
+                  setIsBugModalOpen(true);
+                }
+                setIsFloatingChatOpen(false);
+              }}
+            />
+          </div>
+        )}
+
+        {/* FAB Button */}
+        <button
+          onClick={() => setIsFloatingChatOpen(!isFloatingChatOpen)}
+          className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 ${
+            isFloatingChatOpen 
+              ? 'bg-white text-gray-400 hover:text-purple-600' 
+              : 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white ring-4 ring-purple-500/20'
+          }`}
+        >
+          {isFloatingChatOpen ? <X size={24} /> : <Sparkles size={24} />}
+          {!isFloatingChatOpen && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
+          )}
+        </button>
+      </div>
     </div>
   );
 }
