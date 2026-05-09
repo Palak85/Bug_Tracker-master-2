@@ -22,7 +22,10 @@ class BugController extends Controller
         if ($user && $user->role === 'dev') {
             $query->where(function($q) use ($user) {
                 $q->where('assigned_to', $user->id)
-                  ->orWhere('created_by', $user->id);
+                  ->orWhere('created_by', $user->id)
+                  ->orWhereHas('project', function($pq) use ($user) {
+                      $pq->where('manager_id', $user->id);
+                  });
             });
         }
 
@@ -132,7 +135,8 @@ class BugController extends Controller
     public function update(Request $request, Bug $bug): JsonResponse
     {
         $user = $request->user();
-        $isFullEditor = $user->role === 'admin' || $user->role === 'manager' || $user->id === $bug->created_by;
+        $isProjectManager = $bug->project && $bug->project->manager_id === $user->id;
+        $isFullEditor = $user->role === 'admin' || $user->role === 'manager' || $user->id === $bug->created_by || $isProjectManager;
         $isAssignee = $user->id === $bug->assigned_to;
 
         if (!$isFullEditor && !$isAssignee) {
@@ -151,7 +155,7 @@ class BugController extends Controller
                 'priority'    => ['sometimes', Rule::in(['low', 'medium', 'high', 'urgent'])],
                 'severity'    => ['sometimes', Rule::in(['minor', 'major', 'critical', 'blocker'])],
                 'assigned_to' => 'nullable|exists:users,id',
-                'category'    => 'sometimes|string|max:100',
+                'category'    => 'nullable|string|max:100',
                 'project_id'  => 'nullable|exists:projects,id',
                 'deadline'    => 'nullable|date',
                 'attachment'  => 'nullable|file|mimes:jpg,jpeg,png,pdf,txt|max:5120',
@@ -180,8 +184,9 @@ class BugController extends Controller
     public function destroy(Request $request, Bug $bug): JsonResponse
     {
         $user = $request->user();
-        if ($user->role !== 'admin' && $user->id !== $bug->created_by) {
-            return response()->json(['message' => 'Unauthorized. Only admins or the creator can delete this bug.'], 403);
+        $isProjectManager = $bug->project && $bug->project->manager_id === $user->id;
+        if ($user->role !== 'admin' && $user->id !== $bug->created_by && !$isProjectManager) {
+            return response()->json(['message' => 'Unauthorized. Only admins, project managers, or the creator can delete this bug.'], 403);
         }
 
         // Delete attachment if exists

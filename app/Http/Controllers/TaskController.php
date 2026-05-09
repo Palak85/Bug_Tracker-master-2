@@ -20,7 +20,10 @@ class TaskController extends Controller
         if ($user && $user->role === 'dev') {
             $query->where(function($q) use ($user) {
                 $q->where('assigned_to', $user->id)
-                  ->orWhere('created_by', $user->id);
+                  ->orWhere('created_by', $user->id)
+                  ->orWhereHas('project', function($pq) use ($user) {
+                      $pq->where('manager_id', $user->id);
+                  });
             });
         }
 
@@ -123,7 +126,8 @@ class TaskController extends Controller
     public function update(Request $request, Task $task): JsonResponse
     {
         $user = $request->user();
-        $isFullEditor = $user->role === 'admin' || $user->role === 'manager' || $user->id === $task->created_by;
+        $isProjectManager = $task->project && $task->project->manager_id === $user->id;
+        $isFullEditor = $user->role === 'admin' || $user->role === 'manager' || $user->id === $task->created_by || $isProjectManager;
         $isAssignee = $user->id === $task->assigned_to;
 
         if (!$isFullEditor && !$isAssignee) {
@@ -143,7 +147,7 @@ class TaskController extends Controller
                 'severity'    => ['sometimes', Rule::in(['minor', 'major', 'critical', 'blocker'])],
                 'deadline'    => 'nullable|date',
                 'assigned_to' => 'nullable|exists:users,id',
-                'category'    => 'sometimes|string|max:100',
+                'category'    => 'nullable|string|max:100',
                 'project_id'  => 'nullable|exists:projects,id',
             ]);
         }
@@ -160,8 +164,9 @@ class TaskController extends Controller
     public function destroy(Request $request, Task $task): JsonResponse
     {
         $user = $request->user();
-        if ($user->role !== 'admin' && $user->id !== $task->created_by) {
-            return response()->json(['message' => 'Unauthorized. Only admins or the creator can delete this task.'], 403);
+        $isProjectManager = $task->project && $task->project->manager_id === $user->id;
+        if ($user->role !== 'admin' && $user->id !== $task->created_by && !$isProjectManager) {
+            return response()->json(['message' => 'Unauthorized. Only admins, project managers, or the creator can delete this task.'], 403);
         }
 
         $task->delete();

@@ -33,9 +33,9 @@ export default function KanbanBoard({ tasks, onUpdate, onEditTask, isLoading }) 
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-250px)]">
+      <div className="flex flex-row gap-6 h-[calc(100vh-250px)] overflow-hidden">
         {[1, 2, 3].map(i => (
-          <div key={i} className="bg-gray-50/50 rounded-3xl p-4 animate-pulse border border-gray-100">
+          <div key={i} className="flex-1 min-w-[320px] bg-gray-50/50 rounded-3xl p-4 animate-pulse border border-gray-100">
             <div className="h-6 w-24 bg-gray-200 rounded-full mb-6" />
             <div className="space-y-4">
               {[1, 2].map(j => <div key={j} className="h-32 bg-white rounded-2xl shadow-sm" />)}
@@ -47,13 +47,13 @@ export default function KanbanBoard({ tasks, onUpdate, onEditTask, isLoading }) 
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[600px]">
+    <div className="flex flex-row gap-6 min-h-[600px] overflow-x-auto pb-6 scrollbar-hide">
       {columns.map(col => (
         <div
           key={col.id}
           onDrop={(e) => handleDrop(e, col.id)}
           onDragOver={handleDragOver}
-          className={`flex flex-col bg-[#f8f9fc] rounded-[32px] p-4 border border-transparent transition-all duration-300 ${
+          className={`flex-1 min-w-[320px] flex flex-col bg-[#f8f9fc] rounded-[32px] p-5 border border-transparent transition-all duration-300 ${
             draggedTaskId ? 'hover:border-purple-300 hover:bg-purple-50/30' : ''
           }`}
         >
@@ -95,7 +95,8 @@ export default function KanbanBoard({ tasks, onUpdate, onEditTask, isLoading }) 
                     layoutId={task.id.toString()}
                     draggable
                     onDragStart={(e) => handleDragStart(e, task.id)}
-                    className="group bg-white p-5 rounded-2xl shadow-sm hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all cursor-grab border border-gray-50 relative overflow-hidden"
+                    onClick={() => onEditTask(task)}
+                    className="group bg-white p-5 rounded-2xl shadow-sm hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all cursor-pointer border border-gray-50 relative overflow-hidden"
                   >
                     {/* Priority Accent */}
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${
