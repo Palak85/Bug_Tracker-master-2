@@ -31,17 +31,29 @@ class ProjectController extends Controller
         }
 
         $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'status'      => 'required|in:active,archived',
-            'start_date'  => 'nullable|date',
-            'end_date'    => 'nullable|date|after_or_equal:start_date',
-            'manager_id'  => 'nullable|exists:users,id',
+            'name'         => 'required|string|max:255',
+            'description'  => 'nullable|string',
+            'status'       => 'required|in:active,archived',
+            'start_date'   => 'nullable|date',
+            'end_date'     => 'nullable|date|after_or_equal:start_date',
+            'manager_id'   => 'nullable|exists:users,id',
+            'milestones'   => 'nullable|array',
+            'milestones.*.title'       => 'required|string|max:255',
+            'milestones.*.description' => 'nullable|string',
+            'milestones.*.due_date'    => 'required|date',
         ]);
 
-        $project = Project::create($validated);
+        return \DB::transaction(function () use ($validated) {
+            $project = Project::create(collect($validated)->except('milestones')->toArray());
 
-        return response()->json($project->load('manager:id,name'), 201);
+            if (!empty($validated['milestones'])) {
+                foreach ($validated['milestones'] as $m) {
+                    $project->milestones()->create($m);
+                }
+            }
+
+            return response()->json($project->load(['manager:id,name', 'milestones']), 201);
+        });
     }
 
     /**

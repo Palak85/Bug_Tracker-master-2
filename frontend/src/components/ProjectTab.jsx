@@ -9,7 +9,15 @@ export default function ProjectTab({ onUpdate }) {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({ name: '', description: '', status: 'active', manager_id: '', start_date: '', end_date: '' });
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    description: '', 
+    status: 'active', 
+    manager_id: '', 
+    start_date: '', 
+    end_date: '',
+    milestones: [] 
+  });
   const [error, setError] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [confirmState, setConfirmState] = useState(null);
@@ -41,7 +49,15 @@ export default function ProjectTab({ onUpdate }) {
     try {
       await api.post('/projects', formData);
       setIsModalOpen(false);
-      setFormData({ name: '', description: '', status: 'active', manager_id: '', start_date: '', end_date: '' });
+      setFormData({ 
+        name: '', 
+        description: '', 
+        status: 'active', 
+        manager_id: '', 
+        start_date: '', 
+        end_date: '',
+        milestones: [] 
+      });
       fetchData();
       if (onUpdate) onUpdate();
     } catch (err) {
@@ -67,6 +83,23 @@ export default function ProjectTab({ onUpdate }) {
         }
       },
     });
+  };
+
+  const addMilestone = () => {
+    setFormData({
+      ...formData,
+      milestones: [...formData.milestones, { title: '', description: '', due_date: '' }]
+    });
+  };
+  const removeMilestone = (index) => {
+    const newM = [...formData.milestones];
+    newM.splice(index, 1);
+    setFormData({ ...formData, milestones: newM });
+  };
+  const updateMilestone = (index, field, val) => {
+    const newM = [...formData.milestones];
+    newM[index][field] = val;
+    setFormData({ ...formData, milestones: newM });
   };
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-purple-600" /></div>;
@@ -243,6 +276,62 @@ export default function ProjectTab({ onUpdate }) {
                   <option value="">Select Manager</option>
                   {users.filter(u => u.role !== 'dev').map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
+              </div>
+
+              {/* Milestones Section */}
+              <div className="pt-2 border-t border-gray-100">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Key Milestones</label>
+                  <button 
+                    type="button" 
+                    onClick={addMilestone}
+                    className="text-[10px] font-bold text-purple-600 hover:text-purple-700 bg-purple-50 px-2 py-1 rounded-lg transition-colors"
+                  >
+                    + Add Milestone
+                  </button>
+                </div>
+                
+                <div className="space-y-3 max-h-40 overflow-y-auto pr-1">
+                  {formData.milestones.length === 0 ? (
+                    <p className="text-[10px] text-gray-400 italic ml-1">No milestones added yet.</p>
+                  ) : (
+                    formData.milestones.map((m, idx) => (
+                      <div key={idx} className="bg-gray-50 p-3 rounded-2xl relative group">
+                        <button 
+                          type="button" 
+                          onClick={() => removeMilestone(idx)}
+                          className="absolute -top-1 -right-1 w-5 h-5 bg-white shadow-sm rounded-full flex items-center justify-center text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all z-10"
+                        >
+                          ✕
+                        </button>
+                        <div className="space-y-2">
+                          <input 
+                            placeholder="Milestone Title" 
+                            className="w-full bg-transparent border-none p-0 text-xs font-bold focus:ring-0"
+                            value={m.title}
+                            onChange={e => updateMilestone(idx, 'title', e.target.value)}
+                            required
+                          />
+                          <div className="flex gap-2">
+                            <input 
+                              type="date" 
+                              className="bg-white/50 border-none rounded-lg px-2 py-1 text-[10px] focus:ring-1 focus:ring-purple-400 flex-1"
+                              value={m.due_date}
+                              onChange={e => updateMilestone(idx, 'due_date', e.target.value)}
+                              required
+                            />
+                            <input 
+                              placeholder="Optional description" 
+                              className="bg-white/50 border-none rounded-lg px-2 py-1 text-[10px] focus:ring-1 focus:ring-purple-400 flex-[2]"
+                              value={m.description}
+                              onChange={e => updateMilestone(idx, 'description', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
               
               <div className="flex gap-3 pt-4">
