@@ -19,11 +19,12 @@ export function usePolling(callback, intervalMs = 30_000, enabled = true) {
   useEffect(() => {
     if (!enabled) return;
 
-    // Fire immediately on mount
-    savedCallback.current();
+    // Fire immediately on mount (not a polling tick)
+    savedCallback.current(false);
 
     const id = setInterval(() => {
-      savedCallback.current();
+      // This is a polling tick
+      savedCallback.current(true);
     }, intervalMs);
 
     return () => clearInterval(id);

@@ -47,7 +47,7 @@ export default function NotificationPanel() {
   const panelRef = useRef(null);
 
   /* ── fetch notifications ── */
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotifications = useCallback(async (isPolling = false) => {
     try {
       const [notifRes, countRes] = await Promise.all([
         api.get('/notifications'),

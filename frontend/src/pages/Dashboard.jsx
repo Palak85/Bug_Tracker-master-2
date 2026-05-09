@@ -46,8 +46,8 @@ export default function Dashboard() {
   }, [searchQuery]);
 
   // Wrap fetchData in useCallback so usePolling can reference a stable identity
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
+  const fetchData = useCallback(async (isPolling = false) => {
+    if (!isPolling) setIsLoading(true);
     try {
       const [usersRes, projectsRes] = await Promise.all([
         api.get('/users'),
@@ -67,7 +67,7 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Failed to fetch data', err);
     } finally {
-      setIsLoading(false);
+      if (!isPolling) setIsLoading(false);
     }
   }, [activeTab, filters, debouncedSearch, page]);
 
