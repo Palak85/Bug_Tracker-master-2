@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
-import { LogOut, Bug, Plus, Search, Filter, CheckSquare, Clock, AlertCircle, Loader2, Users, Shield, Zap, Target, TrendingUp, Paperclip, Menu, X, ArrowRight, Sparkles } from 'lucide-react';
+import { LogOut, Bug, Plus, Search, Filter, CheckSquare, Clock, AlertCircle, Loader2, Users, Shield, Zap, Target, TrendingUp, Paperclip, Menu, X, ArrowRight, Sparkles, CalendarClock } from 'lucide-react';
 import BugModal from '../components/BugModal';
 import TaskModal from '../components/TaskModal';
 import ProfileModal from '../components/ProfileModal';
@@ -34,7 +34,7 @@ export default function Dashboard() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [filters, setFilters] = useState({ status: '', priority: '', severity: '', project_id: '' });
+  const [filters, setFilters] = useState({ status: '', priority: '', severity: '', project_id: '', due_date: '' });
   const [confirmState, setConfirmState] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isFloatingChatOpen, setIsFloatingChatOpen] = useState(false);
@@ -210,12 +210,18 @@ export default function Dashboard() {
   const criticalCount  = filteredItems.filter(i => i.priority === 'urgent' || i.priority === 'high').length;
   const activeCount    = filteredItems.filter(i => i.status === 'in_progress').length;
   const resolvedCount  = filteredItems.filter(i => i.status === 'resolved' || i.status === 'closed').length;
+  const overdueCount   = filteredItems.filter(i => {
+    if (!i.deadline) return false;
+    const deadlineDate = new Date(i.deadline);
+    const today = new Date(); today.setHours(0,0,0,0);
+    return deadlineDate < today && i.status !== 'resolved' && i.status !== 'closed';
+  }).length;
 
   const stats = [
     { label: 'Total',    value: totalItems,     pct: 100,                                        color: 'text-purple-600', icon: Zap        },
     { label: 'Critical', value: criticalCount,  pct: totalItems ? Math.round(criticalCount  / totalItems * 100) : 0, color: 'text-rose-500',   icon: AlertCircle },
     { label: 'Active',   value: activeCount,    pct: totalItems ? Math.round(activeCount    / totalItems * 100) : 0, color: 'text-indigo-600', icon: Target      },
-    { label: 'Resolved', value: resolvedCount,  pct: totalItems ? Math.round(resolvedCount  / totalItems * 100) : 0, color: 'text-emerald-600',icon: CheckSquare },
+    { label: 'Overdue',  value: overdueCount,   pct: totalItems ? Math.round(overdueCount   / totalItems * 100) : 0, color: 'text-amber-600',  icon: CalendarClock },
   ];
 
   return (
@@ -376,6 +382,24 @@ export default function Dashboard() {
                   </select>
                 </div>
               ))}
+
+              {/* Due Date Filter */}
+              <div className={`flex items-center gap-2 bg-white border rounded-full px-4 py-2.5 shadow-sm transition-colors ${
+                filters.due_date ? 'border-amber-400 bg-amber-50' : 'border-gray-200 hover:border-purple-300'
+              }`}>
+                <CalendarClock className={`w-3.5 h-3.5 ${filters.due_date ? 'text-amber-600' : 'text-purple-500'}`} />
+                <select
+                  className="bg-transparent text-xs font-semibold text-gray-600 focus:outline-none cursor-pointer"
+                  value={filters.due_date}
+                  onChange={e => handleFilterChange('due_date', e.target.value)}
+                >
+                  <option value="">All Deadlines</option>
+                  <option value="overdue">🔴 Overdue</option>
+                  <option value="due_today">🟡 Due Today</option>
+                  <option value="upcoming">🟢 Next 7 Days</option>
+                  <option value="no_deadline">⚪ No Deadline</option>
+                </select>
+              </div>
 
               <button
                 onClick={handleCreateNew}
@@ -541,7 +565,7 @@ export default function Dashboard() {
                 </h3>
                 <p className="text-gray-400 text-sm line-clamp-2 mb-5 leading-relaxed">{item.description}</p>
 
-                {/* Footer: reporter + priority */}
+                {/* Footer: reporter + priority + deadline badge */}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-50">
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow">
@@ -549,10 +573,37 @@ export default function Dashboard() {
                     </div>
                     <span className="text-xs text-gray-500 font-medium">{item.creator?.name || 'Anonymous'}</span>
                   </div>
-                  <span className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${getPriorityStyle(item.priority)}`}>
-                    <Clock className="w-3 h-3" />
-                    {item.priority || 'none'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {/* Overdue / Due Today badge */}
+                    {item.deadline && (() => {
+                      const dl = new Date(item.deadline);
+                      const today = new Date(); today.setHours(0,0,0,0);
+                      const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+                      const isOverdue = dl < today && item.status !== 'resolved' && item.status !== 'closed';
+                      const isDueToday = dl >= today && dl < tomorrow;
+                      if (isOverdue) return (
+                        <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-full border bg-rose-50 text-rose-600 border-rose-200 animate-pulse">
+                          <CalendarClock className="w-3 h-3" />
+                          Overdue
+                        </span>
+                      );
+                      if (isDueToday) return (
+                        <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-full border bg-amber-50 text-amber-600 border-amber-200">
+                          <CalendarClock className="w-3 h-3" />
+                          Due Today
+                        </span>
+                      );
+                      return (
+                        <span className="flex items-center gap-1 text-[9px] font-medium text-gray-400">
+                          <Clock className="w-3 h-3" />
+                          {dl.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </span>
+                      );
+                    })()}
+                    <span className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${getPriorityStyle(item.priority)}`}>
+                      {item.priority || 'none'}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

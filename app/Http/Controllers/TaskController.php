@@ -55,6 +55,28 @@ class TaskController extends Controller
             });
         }
 
+        // Due date filters
+        if ($request->filled('due_date')) {
+            $today = now()->toDateString();
+            switch ($request->due_date) {
+                case 'overdue':
+                    $query->whereNotNull('deadline')
+                          ->where('deadline', '<', $today)
+                          ->whereNotIn('status', ['resolved']);
+                    break;
+                case 'due_today':
+                    $query->where('deadline', $today);
+                    break;
+                case 'upcoming':
+                    $query->where('deadline', '>', $today)
+                          ->where('deadline', '<=', now()->addDays(7)->toDateString());
+                    break;
+                case 'no_deadline':
+                    $query->whereNull('deadline');
+                    break;
+            }
+        }
+
         $tasks = $query->latest()->paginate(15);
 
         return response()->json($tasks);

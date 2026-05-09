@@ -11,7 +11,7 @@ import { useEffect, useRef } from 'react';
 export function usePolling(callback, intervalMs = 30_000, enabled = true) {
   const savedCallback = useRef(callback);
 
-  // Always call the latest version of callback without resetting the interval
+  // Always keep the ref fresh
   useEffect(() => {
     savedCallback.current = callback;
   }, [callback]);
@@ -19,7 +19,7 @@ export function usePolling(callback, intervalMs = 30_000, enabled = true) {
   useEffect(() => {
     if (!enabled) return;
 
-    // Fire immediately on mount (not a polling tick)
+    // Fire immediately on mount or when callback identity changes (e.g. filter/search/page)
     savedCallback.current(false);
 
     const id = setInterval(() => {
@@ -28,5 +28,5 @@ export function usePolling(callback, intervalMs = 30_000, enabled = true) {
     }, intervalMs);
 
     return () => clearInterval(id);
-  }, [intervalMs, enabled]);
+  }, [intervalMs, enabled, callback]);
 }

@@ -57,6 +57,28 @@ class BugController extends Controller
             });
         }
 
+        // Due date filters
+        if ($request->filled('due_date')) {
+            $today = now()->toDateString();
+            switch ($request->due_date) {
+                case 'overdue':
+                    $query->whereNotNull('deadline')
+                          ->where('deadline', '<', $today)
+                          ->whereNotIn('status', ['resolved', 'closed']);
+                    break;
+                case 'due_today':
+                    $query->where('deadline', $today);
+                    break;
+                case 'upcoming':
+                    $query->where('deadline', '>', $today)
+                          ->where('deadline', '<=', now()->addDays(7)->toDateString());
+                    break;
+                case 'no_deadline':
+                    $query->whereNull('deadline');
+                    break;
+            }
+        }
+
         $bugs = $query->latest()->paginate(15);
 
         return response()->json($bugs);
@@ -75,6 +97,7 @@ class BugController extends Controller
             'assigned_to' => 'nullable|exists:users,id',
             'category'    => 'nullable|string|max:100',
             'project_id'  => 'nullable|exists:projects,id',
+            'deadline'    => 'nullable|date',
             'attachment'  => 'nullable|file|mimes:jpg,jpeg,png,pdf,txt|max:5120', // Max 5MB
         ]);
 
@@ -130,6 +153,7 @@ class BugController extends Controller
                 'assigned_to' => 'nullable|exists:users,id',
                 'category'    => 'sometimes|string|max:100',
                 'project_id'  => 'nullable|exists:projects,id',
+                'deadline'    => 'nullable|date',
                 'attachment'  => 'nullable|file|mimes:jpg,jpeg,png,pdf,txt|max:5120',
             ]);
         }

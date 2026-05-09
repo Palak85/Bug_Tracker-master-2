@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MoreVertical, Plus, Clock, User, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
+import { MoreVertical, Plus, Clock, User, AlertCircle, ArrowRight, Sparkles, CalendarClock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const columns = [
@@ -138,12 +138,31 @@ export default function KanbanBoard({ tasks, onUpdate, onEditTask, isLoading }) 
                         </span>
                       </div>
                       
-                      {task.deadline && (
-                        <div className="flex items-center gap-1 text-[10px] text-gray-400">
-                          <Clock size={10} />
-                          {new Date(task.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                        </div>
-                      )}
+                      {task.deadline && (() => {
+                        const dl = new Date(task.deadline);
+                        const today = new Date(); today.setHours(0,0,0,0);
+                        const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+                        const isOverdue = dl < today && task.status !== 'resolved';
+                        const isDueToday = dl >= today && dl < tomorrow;
+                        if (isOverdue) return (
+                          <div className="flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200 animate-pulse">
+                            <CalendarClock size={10} />
+                            Overdue
+                          </div>
+                        );
+                        if (isDueToday) return (
+                          <div className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                            <CalendarClock size={10} />
+                            Today
+                          </div>
+                        );
+                        return (
+                          <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                            <Clock size={10} />
+                            {dl.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </motion.div>
                 ))}

@@ -24,12 +24,14 @@ class Bug extends Model
         'attachment_name',
         'created_by',
         'assigned_to',
+        'deadline',
     ];
 
     protected $casts = [
         'status'   => 'string',
         'priority' => 'string',
         'severity' => 'string',
+        'deadline' => 'date',
     ];
 
     /**

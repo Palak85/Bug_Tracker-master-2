@@ -13,7 +13,7 @@ const selectCls = 'w-full bg-[#f3f5f9] border border-gray-200 rounded-2xl px-4 p
 export default function BugModal({ isOpen, onClose, bug, onSave, users, projects, currentUser }) {
   const [formData, setFormData] = useState({
     title: '', description: '', priority: 'medium', severity: 'major',
-    status: 'reported', category: '', project_id: '', assigned_to: ''
+    status: 'reported', category: '', project_id: '', assigned_to: '', deadline: ''
   });
   const [attachment, setAttachment] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,10 +26,11 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
       setFormData({
         title: bug.title, description: bug.description, priority: bug.priority,
         severity: bug.severity, status: bug.status, category: bug.category || '',
-        project_id: bug.project_id || '', assigned_to: bug.assigned_to || ''
+        project_id: bug.project_id || '', assigned_to: bug.assigned_to || '',
+        deadline: bug.deadline ? bug.deadline.split('T')[0] : ''
       });
     } else {
-      setFormData({ title: '', description: '', priority: 'medium', severity: 'major', status: 'reported', category: '', project_id: '', assigned_to: '' });
+      setFormData({ title: '', description: '', priority: 'medium', severity: 'major', status: 'reported', category: '', project_id: '', assigned_to: '', deadline: '' });
     }
     setAttachment(null);
   }, [bug, isOpen]);
@@ -181,7 +182,7 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
                 value={formData.description} onChange={e => set('description', e.target.value)} />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className={labelCls}>Project</label>
                 <select disabled={!canEditAll} className={selectCls}
@@ -195,6 +196,11 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
                 <input type="text" disabled={!canEditAll} className={inputCls}
                   placeholder="e.g. UI, API"
                   value={formData.category} onChange={e => set('category', e.target.value)} />
+              </div>
+              <div>
+                <label className={labelCls}>Deadline</label>
+                <input type="date" disabled={!canEditAll} className={inputCls}
+                  value={formData.deadline} onChange={e => set('deadline', e.target.value)} />
               </div>
             </div>
 
