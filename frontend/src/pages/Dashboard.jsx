@@ -629,7 +629,7 @@ export default function Dashboard() {
         {/* FAB Button */}
         <button
           onClick={() => setIsFloatingChatOpen(!isFloatingChatOpen)}
-          className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 ${
+          className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-300 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(139,92,246,0.3)] active:scale-95 ${
             isFloatingChatOpen 
               ? 'bg-white text-gray-400 hover:text-purple-600' 
               : 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white ring-4 ring-purple-500/20'
