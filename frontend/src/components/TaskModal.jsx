@@ -23,9 +23,14 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
   useEffect(() => {
     if (task) {
       setFormData({
-        title: task.title, description: task.description, priority: task.priority,
-        severity: task.severity, status: task.status, category: task.category || '',
-        project_id: task.project_id || '', assigned_to: task.assigned_to || '',
+        title: task.title || '', 
+        description: task.description || '', 
+        priority: (task.priority || 'medium').toLowerCase(),
+        severity: (task.severity || 'minor').toLowerCase(), 
+        status: task.status || 'open', 
+        category: task.category || '',
+        project_id: task.project_id || '', 
+        assigned_to: task.assigned_to || '',
         deadline: task.deadline ? task.deadline.split('T')[0] : ''
       });
     } else {
@@ -44,7 +49,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
       if (!data.assigned_to) data.assigned_to = null;
       if (!data.project_id) data.project_id = null;
       
-      task ? await api.put(`/tasks/${task.id}`, data) : await api.post('/tasks', data);
+      (task && task.id) ? await api.put(`/tasks/${task.id}`, data) : await api.post('/tasks', data);
       onSave(); onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save task');
@@ -91,7 +96,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
                 <h2 className="text-xl font-bold text-gray-800">
                   {task ? (canEditAll ? 'Edit Task' : 'Update Status') : 'New Sprint Task'}
                 </h2>
-                <p className="text-xs text-gray-400 mt-0.5">#{task?.id || 'New'}</p>
+                <p className="text-xs text-gray-400 mt-0.5">#{task?.id && !task.isDraft ? task.id : 'New'}</p>
               </div>
               
               <button
@@ -216,7 +221,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
             </div>
           </form>
 
-          {task && (
+          {task?.id && !task.isDraft && (
             <div className="mt-8 pt-6 border-t border-gray-100">
               <CommentsSection taskId={task.id} />
             </div>
@@ -236,7 +241,8 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
                   ...prev,
                   title: suggestion.title || prev.title,
                   description: suggestion.description || prev.description,
-                  priority: suggestion.priority || prev.priority,
+                  priority: (suggestion.priority || prev.priority).toLowerCase(),
+                  severity: (suggestion.severity || prev.severity || 'minor').toLowerCase(),
                   category: suggestion.category || prev.category
                 }));
               }}

@@ -28,6 +28,7 @@ class User extends Authenticatable
         'role',
         'is_approved',
         'notifications_read_at',
+        'avatar_path',
     ];
 
     /**
@@ -39,6 +40,18 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['avatar_url'];
+
+    public function getAvatarUrlAttribute()
+    {
+        return $this->avatar_path ? asset('storage/' . $this->avatar_path) : null;
+    }
 
     /**
      * Get the attributes that should be cast.

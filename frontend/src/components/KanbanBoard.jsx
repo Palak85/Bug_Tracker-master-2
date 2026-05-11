@@ -3,13 +3,38 @@ import { MoreVertical, Plus, Clock, User, AlertCircle, ArrowRight, Sparkles, Cal
 import { motion, AnimatePresence } from 'framer-motion';
 
 const columns = [
-  { id: 'open', label: 'To Do', color: 'bg-purple-500' },
-  { id: 'in_progress', label: 'In Progress', color: 'bg-amber-500' },
-  { id: 'resolved', label: 'Completed', color: 'bg-emerald-500' }
+  { id: 'open', label: 'To Do', color: 'bg-gradient-to-r from-indigo-500 to-purple-600 shadow-indigo-200' },
+  { id: 'in_progress', label: 'In Progress', color: 'bg-gradient-to-r from-amber-500 to-orange-600 shadow-amber-200' },
+  { id: 'resolved', label: 'Completed', color: 'bg-gradient-to-r from-emerald-500 to-teal-600 shadow-emerald-200' }
 ];
 
 export default function KanbanBoard({ tasks, onUpdate, onEditTask, isLoading }) {
   const [draggedTaskId, setDraggedTaskId] = useState(null);
+  const [expandedRows, setExpandedRows] = useState({});
+
+  const toggleExpand = (id) => {
+    setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const getPriorityStyle = (p) => {
+    switch (p) {
+      case 'urgent': return 'text-white bg-gradient-to-r from-rose-500 to-pink-500 border-rose-600 shadow-sm shadow-rose-200';
+      case 'high':   return 'text-white bg-gradient-to-r from-orange-500 to-amber-500 border-orange-600 shadow-sm shadow-orange-200';
+      case 'medium': return 'text-white bg-gradient-to-r from-indigo-500 to-purple-500 border-indigo-600 shadow-sm shadow-indigo-200';
+      default:       return 'text-[var(--text-muted)] bg-[var(--bg-input)] border-[var(--border-subtle)]';
+    }
+  };
+
+  const getSeverityStyle = (s, status) => {
+    const isClosed = status === 'resolved' || status === 'closed';
+    switch (s) {
+      case 'blocker':
+      case 'critical': return `text-white bg-gradient-to-r from-rose-600 to-pink-600 border-rose-700 shadow-sm shadow-rose-300 ${isClosed ? '' : 'animate-pulse'}`;
+      case 'major':    return 'text-white bg-gradient-to-r from-orange-500 to-red-500 border-orange-600 shadow-sm shadow-orange-200';
+      case 'minor':    return 'text-white bg-gradient-to-r from-blue-400 to-indigo-500 border-blue-500 shadow-sm shadow-blue-200';
+      default:         return 'text-[var(--text-muted)] bg-[var(--bg-input)] border-[var(--border-subtle)]';
+    }
+  };
 
   const handleDragStart = (e, id) => {
     setDraggedTaskId(id);
@@ -33,12 +58,17 @@ export default function KanbanBoard({ tasks, onUpdate, onEditTask, isLoading }) 
 
   if (isLoading) {
     return (
-      <div className="flex flex-row gap-6 h-[calc(100vh-250px)] overflow-hidden">
+      <div className="flex flex-col gap-10">
         {[1, 2, 3].map(i => (
-          <div key={i} className="flex-1 min-w-[320px] bg-gray-50/50 rounded-3xl p-4 animate-pulse border border-gray-100">
-            <div className="h-6 w-24 bg-gray-200 rounded-full mb-6" />
-            <div className="space-y-4">
-              {[1, 2].map(j => <div key={j} className="h-32 bg-white rounded-2xl shadow-sm" />)}
+          <div key={i} className="animate-pulse">
+            <div className="flex justify-between items-center mb-4 px-2">
+              <div className="h-6 w-32 bg-[var(--bg-hover)] rounded-full" />
+              <div className="h-4 w-16 bg-[var(--bg-hover)] rounded-full" />
+            </div>
+            <div className="flex gap-4 overflow-hidden">
+              {[1, 2, 3, 4].map(j => (
+                <div key={j} className="min-w-[280px] h-40 bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-subtle)]" />
+              ))}
             </div>
           </div>
         ))}
@@ -47,94 +77,116 @@ export default function KanbanBoard({ tasks, onUpdate, onEditTask, isLoading }) 
   }
 
   return (
-    <div className="flex flex-row gap-6 min-h-[600px] overflow-x-auto pb-6 scrollbar-hide">
-      {columns.map(col => (
-        <div
-          key={col.id}
-          onDrop={(e) => handleDrop(e, col.id)}
-          onDragOver={handleDragOver}
-          className={`flex-1 min-w-[320px] flex flex-col bg-[#f8f9fc] rounded-[32px] p-5 border border-transparent transition-all duration-300 ${
-            draggedTaskId ? 'hover:border-purple-300 hover:bg-purple-50/30' : ''
-          }`}
-        >
-          {/* Column Header */}
-          <div className="flex justify-between items-center px-2 mb-6">
-            <div className="flex items-center gap-3">
-              <div className={`w-2 h-2 rounded-full ${col.color}`} />
-              <h3 className="text-sm font-bold text-gray-700 uppercase tracking-widest">{col.label}</h3>
-              <span className="bg-white px-2 py-0.5 rounded-lg text-[10px] font-bold text-gray-400 shadow-sm border border-gray-100">
-                {tasks.filter(t => t.status === col.id).length}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onEditTask(null)}
-                className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-all border border-gray-100"
-                title="Add Task"
-              >
-                <Plus size={14} />
-              </button>
-              <button
-                onClick={() => onEditTask(null)}
-                className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 shadow-md flex items-center justify-center text-white hover:scale-110 transition-all"
-                title="AI Task Helper"
-              >
-                <Sparkles size={12} />
-              </button>
-            </div>
-          </div>
+    <div className="flex flex-col gap-12 pb-10">
+      {columns.map(col => {
+        const columnTasks = [...tasks]
+          .filter(t => t.status === col.id)
+          .sort((a, b) => (b.id || 0) - (a.id || 0)); // Most recent first
 
-          {/* Task List */}
-          <div className="flex-1 space-y-4">
-            <AnimatePresence>
-              {tasks
-                .filter(t => t.status === col.id)
-                .map((task) => (
+        return (
+          <div
+            key={col.id}
+            onDrop={(e) => handleDrop(e, col.id)}
+            onDragOver={handleDragOver}
+            className={`flex flex-col transition-all duration-300 ${
+              draggedTaskId ? 'opacity-70' : ''
+            }`}
+          >
+            {/* Row Header */}
+            <div className="flex justify-between items-center px-2 mb-5">
+              <div className="flex items-center gap-4">
+                <div className={`w-3 h-3 rounded-full ${col.color}`} />
+                <div>
+                  <h3 className="text-base font-bold text-[var(--text-primary)] tracking-tight">{col.label}</h3>
+                  <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mt-0.5">
+                    {columnTasks.length} {columnTasks.length === 1 ? 'Task' : 'Tasks'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => toggleExpand(col.id)}
+                  className={`px-4 py-1.5 rounded-full text-[11px] font-bold transition-all border ${
+                    expandedRows[col.id]
+                      ? 'bg-purple-600 text-white border-purple-700 shadow-md'
+                      : 'bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100'
+                  }`}
+                >
+                  {expandedRows[col.id] ? 'Show Less' : 'View All'}
+                </button>
+                {col.id === 'open' && (
+                  <>
+                    <div className="h-6 w-[1px] bg-gray-100 mx-1" />
+                    <button
+                      onClick={() => onEditTask(null)}
+                      className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-all border border-gray-100"
+                      title="Add Task"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Horizontal or Grid Task List */}
+            <div className={`flex gap-5 pb-4 px-2 scrollbar-hide -mx-2 transition-all duration-500 ${
+              expandedRows[col.id] 
+                ? 'flex-wrap items-stretch' 
+                : 'flex-row overflow-x-auto overflow-y-hidden'
+            }`}>
+              <AnimatePresence>
+                {columnTasks.map((task) => (
                   <motion.div
                     key={task.id}
                     layoutId={task.id.toString()}
                     draggable
                     onDragStart={(e) => handleDragStart(e, task.id)}
                     onClick={() => onEditTask(task)}
-                    className="group bg-white p-5 rounded-2xl shadow-sm hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all cursor-pointer border border-gray-50 relative overflow-hidden"
+                    className="group min-w-[300px] max-w-[300px] bg-white p-5 rounded-[24px] shadow-sm hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all cursor-pointer border border-gray-50 relative overflow-hidden"
                   >
                     {/* Priority Accent */}
-                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                    <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${
                       task.priority === 'urgent' ? 'bg-rose-500' :
                       task.priority === 'high' ? 'bg-amber-500' :
                       task.priority === 'medium' ? 'bg-indigo-500' : 'bg-gray-300'
                     }`} />
 
                     <div className="flex justify-between items-start mb-3">
-                      <span className={`text-[10px] font-bold uppercase tracking-tighter px-2 py-0.5 rounded-md ${
-                        task.priority === 'urgent' ? 'bg-rose-50 text-rose-600' :
-                        task.priority === 'high' ? 'bg-amber-50 text-amber-600' :
-                        'bg-gray-50 text-gray-500'
-                      }`}>
-                        {task.priority}
-                      </span>
-                      <button 
-                        onClick={() => onEditTask(task)}
-                        className="text-gray-300 hover:text-purple-500 transition-colors"
-                      >
-                        <ArrowRight size={14} />
-                      </button>
+                      <div className="flex flex-wrap gap-1.5">
+                        {task.severity && (
+                          <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getSeverityStyle(task.severity, task.status)}`}>
+                            {task.severity}
+                          </span>
+                        )}
+                        {task.priority && (
+                          <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getPriorityStyle(task.priority)}`}>
+                            {task.priority}
+                          </span>
+                        )}
+                      </div>
+                      <ArrowRight size={12} className="text-gray-300 group-hover:text-purple-500 group-hover:translate-x-1 transition-all" />
                     </div>
 
-                    <h4 className="text-sm font-bold text-gray-800 mb-2 line-clamp-2 leading-tight">
+                    <h4 className="text-sm font-bold text-[var(--text-primary)] mb-2 line-clamp-1 group-hover:text-purple-600 transition-colors">
                       {task.title}
                     </h4>
                     
-                    <p className="text-xs text-gray-500 line-clamp-2 mb-4 leading-relaxed">
+                    <p className="text-[11px] text-gray-500 line-clamp-2 mb-4 leading-relaxed h-8">
                       {task.description}
                     </p>
 
-                    <div className="flex justify-between items-center pt-4 border-t border-gray-50">
+                    <div className="flex justify-between items-center pt-4 border-t border-[var(--border-subtle)]">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-[10px] text-white font-bold shadow-sm">
-                          {task.assignee ? task.assignee.name.charAt(0) : '?'}
+                        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-[10px] text-white font-bold shadow-sm overflow-hidden">
+                          {task.assignee?.avatar_url ? (
+                            <img src={task.assignee.avatar_url} alt={task.assignee.name} className="w-full h-full object-cover" />
+                          ) : (
+                            task.assignee ? task.assignee.name.charAt(0) : '?'
+                          )}
                         </div>
-                        <span className="text-[10px] font-medium text-gray-500">
+                        <span className="text-[10px] font-medium text-[var(--text-muted)]">
                           {task.assignee ? task.assignee.name.split(' ')[0] : 'Unassigned'}
                         </span>
                       </div>
@@ -146,20 +198,14 @@ export default function KanbanBoard({ tasks, onUpdate, onEditTask, isLoading }) 
                         const isOverdue = dl < today && task.status !== 'resolved';
                         const isDueToday = dl >= today && dl < tomorrow;
                         if (isOverdue) return (
-                          <div className="flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200 animate-pulse">
-                            <CalendarClock size={10} />
+                          <div className="flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                            <CalendarClock size={9} />
                             Overdue
                           </div>
                         );
-                        if (isDueToday) return (
-                          <div className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                            <CalendarClock size={10} />
-                            Today
-                          </div>
-                        );
                         return (
-                          <div className="flex items-center gap-1 text-[10px] text-gray-400">
-                            <Clock size={10} />
+                          <div className="flex items-center gap-1 text-[9px] text-[var(--text-muted)]">
+                            <Clock size={9} />
                             {dl.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                           </div>
                         );
@@ -167,20 +213,31 @@ export default function KanbanBoard({ tasks, onUpdate, onEditTask, isLoading }) 
                     </div>
                   </motion.div>
                 ))}
-            </AnimatePresence>
+              </AnimatePresence>
 
-            {/* Empty State in Column */}
-            {tasks.filter(t => t.status === col.id).length === 0 && (
-              <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-gray-100 rounded-3xl opacity-50">
-                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center mb-2 shadow-sm">
-                  <Plus className="text-gray-300" size={16} />
+              {/* Empty State for In Progress / Completed */}
+              {col.id !== 'open' && columnTasks.length === 0 && (
+                <div className="flex-1 flex flex-col items-center justify-center py-8 border border-dashed border-[var(--border-subtle)] rounded-[24px] opacity-40 bg-[var(--bg-input)]/30 min-w-[300px]">
+                  <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">No tasks {col.label.toLowerCase()}</p>
                 </div>
-                <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Drop here</p>
-              </div>
-            )}
+              )}
+
+              {/* Add New Placeholder Card (Only for To Do) */}
+              {col.id === 'open' && (
+                <div 
+                  onClick={() => onEditTask(null)}
+                  className="min-w-[200px] flex flex-col items-center justify-center border-2 border-dashed border-gray-100 rounded-[24px] opacity-40 hover:opacity-100 hover:border-purple-300 hover:bg-purple-50/20 transition-all cursor-pointer group"
+                >
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform">
+                    <Plus className="text-gray-300 group-hover:text-purple-500" size={16} />
+                  </div>
+                  <p className="text-[10px] font-bold text-gray-300 group-hover:text-purple-500 uppercase tracking-widest">New Task</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

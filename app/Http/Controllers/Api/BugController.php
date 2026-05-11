@@ -16,7 +16,7 @@ class BugController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Bug::with(['creator:id,name', 'assignee:id,name', 'project:id,name']);
+        $query = Bug::with(['creator:id,name,avatar_path', 'assignee:id,name,avatar_path', 'project:id,name']);
 
         $user = $request->user();
         if ($user && $user->role === 'dev') {
@@ -114,7 +114,7 @@ class BugController extends Controller
         }
 
         $bug = Bug::create($validated);
-        $bug->load(['creator:id,name', 'assignee:id,name', 'project:id,name']);
+        $bug->load(['creator:id,name,avatar_path', 'assignee:id,name,avatar_path', 'project:id,name']);
 
         return response()->json($bug, 201);
     }
@@ -124,7 +124,7 @@ class BugController extends Controller
      */
     public function show(Bug $bug): JsonResponse
     {
-        $bug->load(['creator:id,name,email', 'assignee:id,name,email', 'project:id,name']);
+        $bug->load(['creator:id,name,email,avatar_path', 'assignee:id,name,email,avatar_path', 'project:id,name']);
 
         return response()->json($bug);
     }
@@ -173,7 +173,7 @@ class BugController extends Controller
         }
 
         $bug->update($validated);
-        $bug->load(['creator:id,name', 'assignee:id,name', 'project:id,name']);
+        $bug->load(['creator:id,name,avatar_path', 'assignee:id,name,avatar_path', 'project:id,name']);
 
         return response()->json($bug);
     }

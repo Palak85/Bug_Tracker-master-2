@@ -15,7 +15,8 @@ import { Layout } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePolling } from '../hooks/usePolling';
 import BugChatbot from '../components/BugChatbot';
-import { MessageSquareText } from 'lucide-react';
+import { MessageSquareText, Sun, Moon } from 'lucide-react';
+import { useDarkMode } from '../hooks/useDarkMode';
 
 export default function Dashboard() {
   const { user, logout } = useContext(AuthContext);
@@ -38,6 +39,7 @@ export default function Dashboard() {
   const [confirmState, setConfirmState] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isFloatingChatOpen, setIsFloatingChatOpen] = useState(false);
+  const [isDark, toggleTheme] = useDarkMode();
 
   // Debounce the search so we don't fire on every keystroke
   useEffect(() => {
@@ -163,6 +165,17 @@ export default function Dashboard() {
     else setIsTaskModalOpen(true);
   };
 
+  const handleApplySuggestion = ({ title, description, severity, priority, category }) => {
+    setFormData(prev => ({
+      ...prev,
+      ...(title && { title }),
+      ...(description && { description }),
+      ...(severity && { severity: severity.toLowerCase() }),
+      ...(priority && { priority: priority.toLowerCase() }),
+      ...(category && { category }),
+    }));
+  };
+
   const items = activeTab === 'bugs' ? bugs : tasks;
   const filteredItems = items.filter(item => {
     const search = searchQuery.toLowerCase();
@@ -181,19 +194,30 @@ export default function Dashboard() {
 
   const getPriorityStyle = (p) => {
     switch (p) {
-      case 'urgent': return 'text-rose-600 bg-rose-50 border-rose-200';
-      case 'high':   return 'text-orange-600 bg-orange-50 border-orange-200';
-      case 'medium': return 'text-indigo-600 bg-indigo-50 border-indigo-200';
-      default:       return 'text-gray-500 bg-gray-100 border-gray-200';
+      case 'urgent': return 'text-white bg-gradient-to-r from-rose-500 to-pink-500 border-rose-600 shadow-sm shadow-rose-200';
+      case 'high':   return 'text-white bg-gradient-to-r from-orange-500 to-amber-500 border-orange-600 shadow-sm shadow-orange-200';
+      case 'medium': return 'text-white bg-gradient-to-r from-indigo-500 to-purple-500 border-indigo-600 shadow-sm shadow-indigo-200';
+      default:       return 'text-[var(--text-muted)] bg-[var(--bg-input)] border-[var(--border-subtle)]';
     }
   };
 
   const getStatusStyle = (s) => {
     switch (s) {
       case 'resolved':
-      case 'closed':      return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-      case 'in_progress': return 'text-indigo-600 bg-indigo-50 border-indigo-200';
-      default:            return 'text-gray-500 bg-gray-100 border-gray-200';
+      case 'closed':      return 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-600 shadow-sm shadow-emerald-200';
+      case 'in_progress': return 'text-white bg-gradient-to-r from-amber-500 to-orange-500 border-amber-600 shadow-sm shadow-amber-200';
+      default:            return 'text-white bg-gradient-to-r from-indigo-500 to-purple-500 border-indigo-600 shadow-sm shadow-indigo-200';
+    }
+  };
+
+  const getSeverityStyle = (s, status) => {
+    const isClosed = status === 'resolved' || status === 'closed';
+    switch (s) {
+      case 'blocker':
+      case 'critical': return `text-white bg-gradient-to-r from-rose-600 to-pink-600 border-rose-700 shadow-sm shadow-rose-300 ${isClosed ? '' : 'animate-pulse'}`;
+      case 'major':    return 'text-white bg-gradient-to-r from-orange-500 to-red-500 border-orange-600 shadow-sm shadow-orange-200';
+      case 'minor':    return 'text-white bg-gradient-to-r from-blue-400 to-indigo-500 border-blue-500 shadow-sm shadow-blue-200';
+      default:         return 'text-[var(--text-muted)] bg-[var(--bg-input)] border-[var(--border-subtle)]';
     }
   };
 
@@ -225,7 +249,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="flex h-screen bg-[#e9edf5] text-gray-800 overflow-hidden font-sans relative">
+    <div className="flex h-screen bg-[var(--bg-base)] text-[var(--text-primary)] overflow-hidden font-sans relative transition-colors duration-300">
       {/* Background blobs */}
       <div className="absolute w-[600px] h-[600px] bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full blur-[160px] top-[-200px] left-[-200px] opacity-25 pointer-events-none z-0" />
       <div className="absolute w-[500px] h-[500px] bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full blur-[160px] bottom-[-200px] right-[-200px] opacity-25 pointer-events-none z-0" />
@@ -239,9 +263,9 @@ export default function Dashboard() {
       )}
 
       {/* ── SIDEBAR ── */}
-      <aside className={`fixed lg:relative z-30 lg:z-10 w-72 bg-white shadow-[4px_0_30px_rgba(0,0,0,0.08)] flex flex-col h-full transition-transform duration-300 ${
+      <aside className={`fixed lg:relative z-30 lg:z-10 w-72 bg-[var(--bg-surface)] shadow-[4px_0_30px_rgba(0,0,0,0.08)] flex flex-col h-full transition-all duration-300 ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      }`}>
+      } border-r border-[var(--border-subtle)]`}>
         {/* Logo */}
         <div className="px-8 pt-8 pb-6">
           <div className="flex items-center gap-3 mb-10">
@@ -278,19 +302,30 @@ export default function Dashboard() {
         <div className="mt-auto px-6 pb-8">
           <button
             onClick={() => setIsProfileOpen(true)}
-            className="w-full bg-[#f3f5f9] rounded-2xl p-4 flex items-center gap-3 mb-4 hover:bg-purple-50 hover:ring-2 hover:ring-purple-200 transition-all text-left group"
+            className="w-full bg-[var(--bg-input)] rounded-2xl p-4 flex items-center gap-3 mb-4 hover:bg-purple-50 hover:ring-2 hover:ring-purple-200 transition-all text-left group"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow flex-shrink-0">
-              {user?.name?.charAt(0)}
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow flex-shrink-0 overflow-hidden">
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                user?.name?.charAt(0)
+              )}
             </div>
             <div className="overflow-hidden flex-1">
-              <p className="font-bold text-gray-800 text-sm truncate group-hover:text-purple-700 transition-colors">{user?.name}</p>
+              <p className="font-bold text-[var(--text-primary)] text-sm truncate group-hover:text-purple-700 transition-colors">{user?.name}</p>
               <div className="flex items-center gap-1">
                 <Shield className="w-3 h-3 text-purple-500" />
                 <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">{user?.role}</p>
               </div>
             </div>
             <span className="text-[10px] text-purple-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Edit ✦</span>
+          </button>
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center justify-center gap-2 py-3 mb-3 rounded-full text-purple-600 border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors text-xs font-bold uppercase tracking-widest"
+          >
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {isDark ? 'Light Theme' : 'Dark Theme'}
           </button>
           <button
             onClick={logout}
@@ -309,11 +344,11 @@ export default function Dashboard() {
         <div className="flex items-center gap-3 mb-6 lg:hidden">
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-all"
+            className="w-10 h-10 rounded-xl bg-[var(--bg-surface)] shadow-sm flex items-center justify-center text-[var(--text-muted)] hover:text-purple-600 hover:bg-purple-50 transition-all border border-[var(--border-subtle)]"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <span className="text-lg font-bold text-gray-800 capitalize flex-1">{activeTab.replace('_', ' ')}</span>
+          <span className="text-lg font-bold text-[var(--text-primary)] capitalize flex-1">{activeTab.replace('_', ' ')}</span>
           <NotificationPanel />
         </div>
 
@@ -351,11 +386,11 @@ export default function Dashboard() {
           <div className="flex flex-col xl:flex-row gap-4 mb-8 animate-in fade-in slide-in-from-top-2 duration-500">
             {/* Search */}
             <div className="relative flex-1 max-w-xl">
-              <Search className="w-4 h-4 text-gray-400 absolute left-5 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search bugs, tasks, projects..."
-                className="w-full bg-white border border-gray-200 rounded-full pl-12 pr-5 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400/40 shadow-sm transition-all"
+                className="w-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-full pl-12 pr-5 py-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-purple-400/40 shadow-sm transition-all"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
               />
@@ -363,10 +398,10 @@ export default function Dashboard() {
 
             <div className="flex items-center gap-3 flex-wrap">
               {['status', 'priority', 'severity'].map(f => (
-                <div key={f} className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2.5 shadow-sm hover:border-purple-300 transition-colors">
+                <div key={f} className="flex items-center gap-2 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-full px-4 py-2.5 shadow-sm hover:border-purple-300 transition-colors">
                   <Filter className="w-3.5 h-3.5 text-purple-500" />
                   <select
-                    className="bg-transparent text-xs font-semibold text-gray-600 focus:outline-none capitalize cursor-pointer"
+                    className="bg-transparent text-xs font-semibold text-[var(--text-muted)] focus:outline-none capitalize cursor-pointer"
                     value={filters[f]}
                     onChange={e => handleFilterChange(f, e.target.value)}
                   >
@@ -384,12 +419,12 @@ export default function Dashboard() {
               ))}
 
               {/* Due Date Filter */}
-              <div className={`flex items-center gap-2 bg-white border rounded-full px-4 py-2.5 shadow-sm transition-colors ${
-                filters.due_date ? 'border-amber-400 bg-amber-50' : 'border-gray-200 hover:border-purple-300'
+              <div className={`flex items-center gap-2 bg-[var(--bg-surface)] border rounded-full px-4 py-2.5 shadow-sm transition-colors ${
+                filters.due_date ? 'border-amber-400 bg-amber-50' : 'border-[var(--border-subtle)] hover:border-purple-300'
               }`}>
                 <CalendarClock className={`w-3.5 h-3.5 ${filters.due_date ? 'text-amber-600' : 'text-purple-500'}`} />
                 <select
-                  className="bg-transparent text-xs font-semibold text-gray-600 focus:outline-none cursor-pointer"
+                  className="bg-transparent text-xs font-semibold text-[var(--text-muted)] focus:outline-none cursor-pointer"
                   value={filters.due_date}
                   onChange={e => handleFilterChange('due_date', e.target.value)}
                 >
@@ -460,8 +495,12 @@ export default function Dashboard() {
                   <tr key={u.id} className="hover:bg-[#f8f9fc] transition-colors group">
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow">
-                          {u.name.charAt(0)}
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow overflow-hidden">
+                          {u.avatar_url ? (
+                            <img src={u.avatar_url} alt={u.name} className="w-full h-full object-cover" />
+                          ) : (
+                            u.name.charAt(0)
+                          )}
                         </div>
                         <div>
                           <p className="font-bold text-gray-800">{u.name}</p>
@@ -532,12 +571,12 @@ export default function Dashboard() {
               <div
                 key={item.id}
                 onClick={() => handleEdit(item)}
-                className="bg-white rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.07)] border border-transparent hover:border-purple-200 hover:shadow-[0_8px_30px_rgba(139,92,246,0.12)] transition-all duration-300 cursor-pointer group"
+                className="bg-[var(--bg-surface)] rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.07)] border border-[var(--border-subtle)] hover:border-purple-200 hover:shadow-[0_8px_30px_rgba(139,92,246,0.12)] transition-all duration-300 cursor-pointer group"
               >
                 {/* Top row: ID + tags + status */}
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">#{item.id}</span>
+                    <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest">#{item.id}</span>
                     <div className="flex flex-wrap gap-1.5 mt-1.5 items-center">
                       {(item.project || item.project_id) && (
                         <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200 font-bold uppercase tracking-wide">
@@ -545,7 +584,7 @@ export default function Dashboard() {
                         </span>
                       )}
                       {item.attachment_path && (
-                        <Paperclip size={12} className="text-gray-400" title="Has attachment" />
+                        <Paperclip size={12} className="text-[var(--text-muted)]" title="Has attachment" />
                       )}
                       {item.category && (
                         <span className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200 font-bold uppercase tracking-wide">
@@ -554,22 +593,33 @@ export default function Dashboard() {
                       )}
                     </div>
                   </div>
-                  <span className={`text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${getStatusStyle(item.status)}`}>
-                    {(item.status || '').replace('_', ' ')}
-                  </span>
+                  <div className="flex gap-2">
+                    {item.severity && (
+                      <span className={`text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${getSeverityStyle(item.severity, item.status)}`}>
+                        {item.severity}
+                      </span>
+                    )}
+                    <span className={`text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${getStatusStyle(item.status)}`}>
+                      {(item.status || '').replace('_', ' ')}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Title */}
-                <h3 className="font-bold text-gray-800 text-base mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors leading-snug">
+                <h3 className="font-bold text-[var(--text-primary)] text-base mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors leading-snug">
                   {item.title}
                 </h3>
-                <p className="text-gray-400 text-sm line-clamp-2 mb-5 leading-relaxed">{item.description}</p>
+                <p className="text-[var(--text-muted)] text-sm line-clamp-2 mb-5 leading-relaxed">{item.description}</p>
 
                 {/* Footer: reporter + priority + deadline badge */}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-50">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow">
-                      {(item.creator?.name || 'U').charAt(0)}
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow overflow-hidden">
+                      {item.creator?.avatar_url ? (
+                        <img src={item.creator.avatar_url} alt={item.creator.name} className="w-full h-full object-cover" />
+                      ) : (
+                        (item.creator?.name || 'U').charAt(0)
+                      )}
                     </div>
                     <span className="text-xs text-gray-500 font-medium">{item.creator?.name || 'Anonymous'}</span>
                   </div>
@@ -600,9 +650,10 @@ export default function Dashboard() {
                         </span>
                       );
                     })()}
-                    <span className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${getPriorityStyle(item.priority)}`}>
-                      {item.priority || 'none'}
-                    </span>
+                    <div className={`flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border ${getPriorityStyle(item.priority)}`}>
+                      <AlertCircle size={10} />
+                      {item.priority}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -667,7 +718,8 @@ export default function Dashboard() {
                     ...suggestion, 
                     isDraft: true,
                     status: 'reported',
-                    severity: suggestion.severity || 'major'
+                    severity: (suggestion.severity || 'major').toLowerCase(),
+                    priority: (suggestion.priority || 'medium').toLowerCase()
                   });
                   setIsBugModalOpen(true);
                 }

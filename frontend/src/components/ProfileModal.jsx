@@ -16,7 +16,7 @@ const roleMeta = {
 };
 
 export default function ProfileModal({ isOpen, onClose }) {
-  const { user, updateUser } = useContext(AuthContext);
+  const { user, updateUser, updateAvatar } = useContext(AuthContext);
 
   const [name,            setName]            = useState('');
   const [email,           setEmail]           = useState('');
@@ -28,6 +28,7 @@ export default function ProfileModal({ isOpen, onClose }) {
   const [showConfirm,     setShowConfirm]     = useState(false);
   const [changingPw,      setChangingPw]      = useState(false);
   const [isSubmitting,    setIsSubmitting]    = useState(false);
+  const [isUploading,     setIsUploading]     = useState(false);
   const [successMsg,      setSuccessMsg]      = useState('');
   const [errorMsg,        setErrorMsg]        = useState('');
 
@@ -49,6 +50,27 @@ export default function ProfileModal({ isOpen, onClose }) {
 
   const role = roleMeta[user.role] ?? roleMeta.dev;
   const initials = (user.name || 'U').slice(0, 2).toUpperCase();
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    try {
+      await updateAvatar(formData);
+      setSuccessMsg('Profile picture updated!');
+    } catch (err) {
+      setErrorMsg('Failed to upload avatar.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -109,10 +131,25 @@ export default function ProfileModal({ isOpen, onClose }) {
 
           {/* Avatar + role badge */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4 select-none">
-              {initials}
+            <div className="relative group cursor-pointer">
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4 select-none overflow-hidden border-4 border-white ring-1 ring-gray-100">
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
+                {isUploading && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  </div>
+                )}
+              </div>
+              <label className="absolute -right-2 -bottom-0.5 w-8 h-8 rounded-xl bg-white shadow-xl border border-gray-100 flex items-center justify-center text-purple-600 cursor-pointer hover:scale-110 active:scale-90 transition-all">
+                <Pencil className="w-4 h-4" />
+                <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} disabled={isUploading} />
+              </label>
             </div>
-            <h3 className="text-lg font-bold text-gray-800">{user.name}</h3>
+            <h3 className="text-lg font-bold text-gray-800 mt-2">{user.name}</h3>
             <p className="text-sm text-gray-400 mb-3">{user.email}</p>
             <span className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border ${role.bg} ${role.text} ${role.border}`}>
               <Shield className="w-3 h-3" />

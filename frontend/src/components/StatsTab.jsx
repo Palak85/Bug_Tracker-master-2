@@ -5,12 +5,14 @@ import {
   PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
 import { Bug, CheckCircle, Clock, AlertTriangle, TrendingUp, Users } from 'lucide-react';
+import { useDarkMode } from '../hooks/useDarkMode';
 
 const COLORS = ['#8b5cf6', '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#ef4444'];
 
 export default function StatsTab() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isDark] = useDarkMode();
 
   useEffect(() => {
     fetchStats();
@@ -84,7 +86,13 @@ export default function StatsTab() {
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                  contentStyle={{ 
+                    borderRadius: '16px', 
+                    border: 'none', 
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                    backgroundColor: isDark ? '#1e293b' : '#fff',
+                    color: isDark ? '#f1f5f9' : '#1f2937'
+                  }}
                 />
                 <Legend verticalAlign="bottom" height={36}/>
               </PieChart>
@@ -101,13 +109,19 @@ export default function StatsTab() {
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={stats.bug_trends}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f0f0f0'} />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: isDark ? '#94a3b8' : '#9ca3af' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: isDark ? '#94a3b8' : '#9ca3af' }} />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                  contentStyle={{ 
+                    borderRadius: '16px', 
+                    border: 'none', 
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                    backgroundColor: isDark ? '#1e293b' : '#fff',
+                    color: isDark ? '#f1f5f9' : '#1f2937'
+                  }}
                 />
-                <Line type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={4} dot={{ r: 6, fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 8 }} />
+                <Line type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={4} dot={{ r: 6, fill: '#8b5cf6', strokeWidth: 2, stroke: isDark ? '#1e293b' : '#fff' }} activeDot={{ r: 8 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -122,12 +136,18 @@ export default function StatsTab() {
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.bugs_by_status}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                <XAxis dataKey="status" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f0f0f0'} />
+                <XAxis dataKey="status" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: isDark ? '#94a3b8' : '#9ca3af' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: isDark ? '#94a3b8' : '#9ca3af' }} />
                 <Tooltip 
-                   cursor={{ fill: '#f3f4f6' }}
-                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                   cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6' }}
+                   contentStyle={{ 
+                     borderRadius: '16px', 
+                     border: 'none', 
+                     boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                     backgroundColor: isDark ? '#1e293b' : '#fff',
+                     color: isDark ? '#f1f5f9' : '#1f2937'
+                   }}
                 />
                 <Bar dataKey="count" fill="#6366f1" radius={[10, 10, 0, 0]} barSize={40} />
               </BarChart>

@@ -109,7 +109,7 @@ export default function NotificationPanel() {
       {/* ── Bell Button ── */}
       <button
         onClick={() => setIsOpen(prev => !prev)}
-        className="relative w-10 h-10 rounded-xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-gray-500 hover:text-purple-600 hover:bg-purple-50 hover:border-purple-200 transition-all"
+        className="relative w-10 h-10 rounded-xl bg-[var(--bg-surface)] shadow-sm border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-muted)] hover:text-purple-600 hover:bg-purple-50 hover:border-purple-200 transition-all"
         title="Notifications"
       >
         <Bell size={18} />
@@ -122,13 +122,13 @@ export default function NotificationPanel() {
 
       {/* ── Dropdown Panel ── */}
       {isOpen && (
-        <div className="absolute right-0 top-12 w-80 bg-white rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 top-12 w-80 bg-[var(--bg-surface)] rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-[var(--border-subtle)] z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
 
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-subtle)]">
             <div className="flex items-center gap-2">
               <Bell size={16} className="text-purple-500" />
-              <h3 className="font-bold text-gray-800 text-sm">Notifications</h3>
+              <h3 className="font-bold text-[var(--text-primary)] text-sm">Notifications</h3>
               {unreadCount > 0 && (
                 <span className="bg-rose-50 text-rose-500 text-[10px] font-bold px-2 py-0.5 rounded-full">
                   {unreadCount} new

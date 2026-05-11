@@ -14,7 +14,7 @@ class TaskController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Task::with(['creator:id,name', 'assignee:id,name', 'project:id,name']);
+        $query = Task::with(['creator:id,name,avatar_path', 'assignee:id,name,avatar_path', 'project:id,name']);
 
         $user = $request->user();
         if ($user && $user->role === 'dev') {
@@ -105,7 +105,7 @@ class TaskController extends Controller
         $validated['status'] = 'open';
 
         $task = Task::create($validated);
-        $task->load(['creator:id,name', 'assignee:id,name', 'project:id,name']);
+        $task->load(['creator:id,name,avatar_path', 'assignee:id,name,avatar_path', 'project:id,name']);
 
         return response()->json($task, 201);
     }
@@ -115,7 +115,7 @@ class TaskController extends Controller
      */
     public function show(Task $task): JsonResponse
     {
-        $task->load(['assignee:id,name,email', 'project:id,name']);
+        $task->load(['assignee:id,name,email,avatar_path', 'project:id,name']);
 
         return response()->json($task);
     }
@@ -153,7 +153,7 @@ class TaskController extends Controller
         }
 
         $task->update($validated);
-        $task->load(['assignee:id,name', 'project:id,name']);
+        $task->load(['assignee:id,name,avatar_path', 'project:id,name']);
 
         return response()->json($task);
     }

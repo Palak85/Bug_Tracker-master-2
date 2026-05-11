@@ -24,9 +24,14 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
   useEffect(() => {
     if (bug) {
       setFormData({
-        title: bug.title, description: bug.description, priority: bug.priority,
-        severity: bug.severity, status: bug.status, category: bug.category || '',
-        project_id: bug.project_id || '', assigned_to: bug.assigned_to || '',
+        title: bug.title || '', 
+        description: bug.description || '', 
+        priority: (bug.priority || 'medium').toLowerCase(),
+        severity: (bug.severity || 'major').toLowerCase(), 
+        status: bug.status || 'reported', 
+        category: bug.category || '',
+        project_id: bug.project_id || '', 
+        assigned_to: bug.assigned_to || '',
         deadline: bug.deadline ? bug.deadline.split('T')[0] : ''
       });
     } else {
@@ -54,7 +59,7 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
         form.append('attachment', attachment);
       }
 
-      if (bug) {
+      if (bug && bug.id) {
         // Laravel PUT with files needs _method override
         form.append('_method', 'PUT');
         await api.post(`/bugs/${bug.id}`, form, {
@@ -101,12 +106,13 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
         ? (users || []).filter(u => u.role !== 'admin' && u.id !== currentUser.id)
         : [];
 
-  const handleApplySuggestion = ({ title, description, severity, category }) => {
+  const handleApplySuggestion = ({ title, description, severity, priority, category }) => {
     setFormData(prev => ({
       ...prev,
       ...(title && { title }),
       ...(description && { description }),
-      ...(severity && { severity }),
+      ...(severity && { severity: severity.toLowerCase() }),
+      ...(priority && { priority: priority.toLowerCase() }),
       ...(category && { category }),
     }));
   };
@@ -125,7 +131,7 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
             <h2 className="text-xl font-bold text-gray-800">
               {bug ? (canEditAll ? 'Edit Bug Report' : 'Update Status') : 'New Bug Report'}
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">#{bug?.id || 'New'}</p>
+            <p className="text-xs text-gray-400 mt-0.5">#{bug?.id && !bug.isDraft ? bug.id : 'New'}</p>
           </div>
           <div className="flex items-center gap-2">
             {canEditAll && (
@@ -293,7 +299,7 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
             </div>
           </form>
 
-          {bug && (
+          {bug?.id && !bug.isDraft && (
             <div className="mt-8 pt-6 border-t border-gray-100">
               <CommentsSection bugId={bug.id} />
             </div>

@@ -18,8 +18,9 @@ JSON structure:
   "title": "Short bug title",
   "description": "**Steps to Reproduce:**\\n1. [Step]\\n\\n**Expected:**\\n[Result]\\n\\n**Actual:**\\n[Result]",
   "severity": "minor|major|critical|blocker",
+  "priority": "low|medium|high|urgent",
   "category": "UI|API|Auth|Performance|Database|Security|Other",
-  "severity_reason": "Reason for severity"
+  "severity_reason": "Reason for severity/priority"
 }
 \`\`\`
 
@@ -223,7 +224,7 @@ export default function BugChatbot({ onClose, onApplySuggestion, formData, type 
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#f8f9fc] rounded-r-[30px] border-l border-gray-100 overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--bg-base)] rounded-r-[30px] border-l border-[var(--border-subtle)] overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-tr-[30px]">
         <div className="flex items-center gap-2.5">
@@ -270,17 +271,17 @@ export default function BugChatbot({ onClose, onApplySuggestion, formData, type 
 
             <div className="flex flex-col gap-2 max-w-[85%]">
               {/* Main bubble */}
-              <div className={`px-4 py-3 rounded-2xl text-xs leading-relaxed text-gray-700 shadow-sm ${
+              <div className={`px-4 py-3 rounded-2xl text-xs leading-relaxed shadow-sm ${
                 msg.role === 'user'
                   ? 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-tr-sm'
-                  : 'bg-white rounded-tl-sm border border-gray-100'
+                  : 'bg-[var(--bg-surface)] text-[var(--text-primary)] rounded-tl-sm border border-[var(--border-subtle)]'
               }`}>
                 {msg.role === 'user' ? msg.text : renderText(msg.text.replace(/```json[\s\S]*?```/g, '').trim())}
               </div>
 
               {/* Structured suggestion card */}
               {msg.parsed && (
-                <div className="bg-white border border-purple-100 rounded-2xl p-4 shadow-sm space-y-3">
+                <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl p-4 shadow-sm space-y-3">
                   <div className="flex items-center gap-1.5 mb-2">
                     <Lightbulb className="w-3.5 h-3.5 text-purple-500" />
                     <span className="text-[10px] font-bold uppercase tracking-widest text-purple-500">
@@ -289,8 +290,8 @@ export default function BugChatbot({ onClose, onApplySuggestion, formData, type 
                   </div>
 
                   <div>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Title</p>
-                    <p className="text-xs font-semibold text-gray-800">{msg.parsed.title}</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-0.5">Title</p>
+                    <p className="text-xs font-semibold text-[var(--text-primary)]">{msg.parsed.title}</p>
                   </div>
 
                   <div>
@@ -346,7 +347,7 @@ export default function BugChatbot({ onClose, onApplySuggestion, formData, type 
             <div className="w-7 h-7 rounded-xl flex-shrink-0 flex items-center justify-center shadow-sm bg-gradient-to-br from-purple-500 to-indigo-600">
               <Bot className="w-3.5 h-3.5 text-white" />
             </div>
-            <div className="bg-white rounded-2xl rounded-tl-sm border border-gray-100 shadow-sm">
+            <div className="bg-[var(--bg-surface)] rounded-2xl rounded-tl-sm border border-[var(--border-subtle)] shadow-sm">
               <TypingDots />
             </div>
           </div>
@@ -381,7 +382,7 @@ export default function BugChatbot({ onClose, onApplySuggestion, formData, type 
       )}
 
       {/* Input */}
-      <div className="p-3 bg-white border-t border-gray-100 rounded-br-[30px]">
+      <div className="p-3 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] rounded-br-[30px]">
         <div className="flex items-end gap-2">
           <textarea
             ref={inputRef}
@@ -395,7 +396,7 @@ export default function BugChatbot({ onClose, onApplySuggestion, formData, type 
               }
             }}
             placeholder="Describe the bug... (Enter to send)"
-            className="flex-1 bg-[#f3f5f9] rounded-2xl px-4 py-2.5 text-xs text-gray-700 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-400/40 transition-all leading-relaxed"
+            className="flex-1 bg-[var(--bg-input)] rounded-2xl px-4 py-2.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] resize-none focus:outline-none focus:ring-2 focus:ring-purple-400/40 transition-all leading-relaxed"
           />
           <button
             onClick={() => sendMessage()}

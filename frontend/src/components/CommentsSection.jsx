@@ -124,8 +124,12 @@ export default function CommentsSection({ bugId, taskId }) {
             <div key={comment.id} className="group animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                    {comment.user.name.charAt(0)}
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-sm overflow-hidden">
+                    {comment.user.avatar_url ? (
+                      <img src={comment.user.avatar_url} alt={comment.user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      comment.user.name.charAt(0)
+                    )}
                   </div>
                   <div>
                     <span className="text-sm font-bold text-gray-800">{comment.user.name}</span>

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\MilestoneController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\StatsController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -24,9 +25,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
     
     Route::get('/users', function () {
-        return \App\Models\User::where('is_approved', true)->select('id', 'name', 'role')->get();
+        return \App\Models\User::where('is_approved', true)->select('id', 'name', 'role', 'avatar_path')->get();
     });
 
     Route::apiResource('projects', ProjectController::class);

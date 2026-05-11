@@ -1,7 +1,7 @@
 import { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { ArrowRight, Loader2, Eye, EyeOff, AlertCircle, CheckCircle, Mail, Lock } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, Eye, EyeOff, AlertCircle, CheckCircle, Mail, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useDarkMode } from '../hooks/useDarkMode';
 
@@ -48,6 +48,13 @@ export default function Login() {
       {/* Background blobs */}
       <div className="absolute w-[600px] h-[600px] bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full blur-[150px] top-[-200px] left-[-200px] opacity-40 pointer-events-none" />
       <div className="absolute w-[500px] h-[500px] bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full blur-[150px] bottom-[-200px] right-[-200px] opacity-40 pointer-events-none" />
+
+      <div className="absolute top-8 left-8 z-20">
+        <Link to="/" className="flex items-center gap-2 text-xs font-bold text-purple-600 hover:text-purple-700 transition-colors group bg-white/80 backdrop-blur-md px-5 py-2.5 rounded-full shadow-sm border border-white/50">
+          <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+          BACK TO HOME
+        </Link>
+      </div>
 
       {/* Main Card — responsive: fluid width, right panel hides on mobile */}
       <div className="relative w-full max-w-[900px] bg-white rounded-[30px] shadow-[0_25px_60px_rgba(0,0,0,0.15)] flex overflow-hidden min-h-[480px]">

@@ -19,7 +19,7 @@ class CommentController extends Controller
             'task_id' => 'required_without:bug_id|exists:tasks,id',
         ]);
 
-        $query = Comment::with('user:id,name,role');
+        $query = Comment::with('user:id,name,role,avatar_path');
 
         if ($request->has('bug_id')) {
             $query->where('bug_id', $request->bug_id);
@@ -50,7 +50,7 @@ class CommentController extends Controller
             'content' => $validated['content'],
         ]);
 
-        return response()->json($comment->load('user:id,name,role'), 201);
+        return response()->json($comment->load('user:id,name,role,avatar_path'), 201);
     }
 
     /**

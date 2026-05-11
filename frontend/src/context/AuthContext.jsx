@@ -48,6 +48,14 @@ export const AuthProvider = ({ children }) => {
     return response.data.user;
   };
 
+  const updateAvatar = async (formData) => {
+    const response = await api.post('/profile/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    setUser(response.data.user);
+    return response.data.user;
+  };
+
   const logout = async () => {
     try {
       await api.post('/logout');
@@ -60,7 +68,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUser, updateAvatar }}>
       {!loading && children}
     </AuthContext.Provider>
   );
