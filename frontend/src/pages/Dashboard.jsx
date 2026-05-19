@@ -222,7 +222,7 @@ export default function Dashboard() {
   };
 
   const navItems = [
-    ...(user?.role !== 'dev' ? [{ id: 'projects',  icon: Layout,      label: 'Projects'     }] : []),
+    { id: 'projects',  icon: Layout,      label: 'Projects'     },
     { id: 'bugs',      icon: Bug,         label: 'Issues Log'   },
     { id: 'tasks',     icon: CheckSquare,  label: 'Sprint Board' },
     ...(user?.role === 'admin' ? [{ id: 'analytics', icon: TrendingUp,   label: 'Analytics'    }] : []),
@@ -477,8 +477,8 @@ export default function Dashboard() {
           <StatsTab />
         ) : activeTab === 'activity' ? (
           <ActivityFeed />
-        ) : activeTab === 'projects' && user?.role !== 'dev' ? (
-          <ProjectTab onUpdate={fetchData} />
+        ) : activeTab === 'projects' ? (
+          <ProjectTab onUpdate={fetchData} currentUser={user} />
         ) : activeTab === 'users' ? (
           /* ── USERS TABLE ── */
           <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.07)] overflow-hidden">

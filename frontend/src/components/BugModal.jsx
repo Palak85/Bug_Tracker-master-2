@@ -21,6 +21,8 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
   const [confirmState, setConfirmState] = useState(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
+  const today = new Date().toISOString().split('T')[0];
+
   useEffect(() => {
     if (bug) {
       setFormData({
@@ -100,11 +102,9 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
   const set = (key, val) => setFormData({ ...formData, [key]: val });
 
   const assignableUsers = !currentUser ? [] :
-    currentUser.role === 'admin'
-      ? (users || [])
-      : currentUser.role === 'manager'
-        ? (users || []).filter(u => u.role !== 'admin' && u.id !== currentUser.id)
-        : [];
+    (currentUser.role === 'admin' || currentUser.role === 'manager')
+      ? (users || []).filter(u => u.role !== 'admin')
+      : [];
 
   const handleApplySuggestion = ({ title, description, severity, priority, category }) => {
     setFormData(prev => ({
@@ -191,7 +191,7 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className={labelCls}>Project</label>
-                <select disabled={!canEditAll} className={selectCls}
+                <select required disabled={!canEditAll} className={selectCls}
                   value={formData.project_id} onChange={e => set('project_id', e.target.value)}>
                   <option value="">Select Project</option>
                   {(projects || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -205,7 +205,7 @@ export default function BugModal({ isOpen, onClose, bug, onSave, users, projects
               </div>
               <div>
                 <label className={labelCls}>Deadline</label>
-                <input type="date" disabled={!canEditAll} className={inputCls}
+                <input type="date" min={today} disabled={!canEditAll} className={inputCls}
                   value={formData.deadline} onChange={e => set('deadline', e.target.value)} />
               </div>
             </div>

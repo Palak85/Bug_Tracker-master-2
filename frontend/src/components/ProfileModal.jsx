@@ -4,6 +4,7 @@ import {
   X, Loader2, User, Mail, Lock, Eye, EyeOff,
   CheckCircle, AlertCircle, Shield, Pencil, KeyRound,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const labelCls  = 'block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1.5';
 const inputCls  = 'w-full bg-[#f3f5f9] border border-gray-200 rounded-2xl px-4 py-3 text-gray-700 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed';
@@ -65,8 +66,10 @@ export default function ProfileModal({ isOpen, onClose }) {
     try {
       await updateAvatar(formData);
       setSuccessMsg('Profile picture updated!');
+      toast.success('Profile picture updated!');
     } catch (err) {
       setErrorMsg('Failed to upload avatar.');
+      toast.error('Failed to upload avatar.');
     } finally {
       setIsUploading(false);
     }
@@ -79,6 +82,7 @@ export default function ProfileModal({ isOpen, onClose }) {
 
     if (changingPw && newPassword !== confirmPassword) {
       setErrorMsg('New passwords do not match.');
+      toast.error('New passwords do not match.');
       return;
     }
 
@@ -92,14 +96,17 @@ export default function ProfileModal({ isOpen, onClose }) {
           : {}),
       });
       setSuccessMsg('Profile updated successfully!');
+      toast.success('Profile updated successfully!');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setChangingPw(false);
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || err.response?.data?.errors
+      const msg = err.response?.data?.message || err.response?.data?.errors
         ? Object.values(err.response.data.errors).flat().join(' ')
-        : 'Failed to update profile.');
+        : 'Failed to update profile.';
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }

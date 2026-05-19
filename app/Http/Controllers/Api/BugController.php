@@ -99,7 +99,7 @@ class BugController extends Controller
             'severity'    => ['sometimes', Rule::in(['minor', 'major', 'critical', 'blocker'])],
             'assigned_to' => 'nullable|exists:users,id',
             'category'    => 'nullable|string|max:100',
-            'project_id'  => 'nullable|exists:projects,id',
+            'project_id'  => 'required|exists:projects,id',
             'deadline'    => 'nullable|date',
             'attachment'  => 'nullable|file|mimes:jpg,jpeg,png,pdf,txt|max:5120', // Max 5MB
         ]);
@@ -156,7 +156,7 @@ class BugController extends Controller
                 'severity'    => ['sometimes', Rule::in(['minor', 'major', 'critical', 'blocker'])],
                 'assigned_to' => 'nullable|exists:users,id',
                 'category'    => 'nullable|string|max:100',
-                'project_id'  => 'nullable|exists:projects,id',
+                'project_id'  => 'sometimes|required|exists:projects,id',
                 'deadline'    => 'nullable|date',
                 'attachment'  => 'nullable|file|mimes:jpg,jpeg,png,pdf,txt|max:5120',
             ]);

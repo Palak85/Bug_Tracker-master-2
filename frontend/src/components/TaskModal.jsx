@@ -19,6 +19,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
   const [error, setError] = useState('');
   const [confirmState, setConfirmState] = useState(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     if (task) {
@@ -76,11 +77,9 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
   const set = (key, val) => setFormData({ ...formData, [key]: val });
 
   const assignableUsers = !currentUser ? [] :
-    currentUser.role === 'admin'
-      ? (users || [])
-      : currentUser.role === 'manager'
-        ? (users || []).filter(u => u.role !== 'admin' && u.id !== currentUser.id)
-        : [];
+    (currentUser.role === 'admin' || currentUser.role === 'manager')
+      ? (users || []).filter(u => u.role !== 'admin')
+      : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -163,7 +162,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, users, projec
                 <label className={labelCls}>Deadline</label>
                 <div className="relative">
                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                   <input type="date" disabled={!canEditAll} className={`${inputCls} pl-11`}
+                   <input type="date" min={today} disabled={!canEditAll} className={`${inputCls} pl-11`}
                     value={formData.deadline} onChange={e => set('deadline', e.target.value)} />
                 </div>
               </div>

@@ -3,7 +3,7 @@ import api from '../services/api';
 import { Plus, Layout, User, Clock, Loader2, AlertCircle, Trash2 } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 
-export default function ProjectTab({ onUpdate }) {
+export default function ProjectTab({ onUpdate, currentUser }) {
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +22,8 @@ export default function ProjectTab({ onUpdate }) {
   const [deleteError, setDeleteError] = useState('');
   const [confirmState, setConfirmState] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null); // For detailed roadmap view
+  
+  const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     fetchData();
@@ -108,12 +110,14 @@ export default function ProjectTab({ onUpdate }) {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold text-gray-800">Projects Management</h3>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-purple-200 hover:scale-[1.03] transition-all"
-        >
-          <Plus size={18} /> New Project
-        </button>
+        {currentUser?.role !== 'dev' && (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-purple-200 hover:scale-[1.03] transition-all"
+          >
+            <Plus size={18} /> New Project
+          </button>
+        )}
       </div>
 
       {deleteError && (
@@ -147,9 +151,11 @@ export default function ProjectTab({ onUpdate }) {
                     }`}>
                       {project.status}
                     </span>
-                    <button onClick={() => handleDelete(project.id, project.name)} className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-rose-500 transition-all">
-                      <Trash2 size={14} />
-                    </button>
+                    {currentUser?.role !== 'dev' && (
+                      <button onClick={() => handleDelete(project.id, project.name)} className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-rose-500 transition-all">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <h4 className="font-bold text-gray-800 mb-2">{project.name}</h4>
@@ -260,12 +266,12 @@ export default function ProjectTab({ onUpdate }) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Start Date</label>
-                  <input type="date" className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-400" 
+                  <input type="date" min={today} className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-400" 
                     value={formData.start_date} onChange={e => setFormData({...formData, start_date: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">End Date</label>
-                  <input type="date" className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-400" 
+                  <input type="date" min={formData.start_date || today} className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-400" 
                     value={formData.end_date} onChange={e => setFormData({...formData, end_date: e.target.value})} />
                 </div>
               </div>
@@ -274,7 +280,7 @@ export default function ProjectTab({ onUpdate }) {
                 <select className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-400 cursor-pointer"
                   value={formData.manager_id} onChange={e => setFormData({...formData, manager_id: e.target.value})}>
                   <option value="">Select Manager</option>
-                  {users.filter(u => u.role !== 'dev').map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                  {users.filter(u => u.role !== 'dev' && u.role !== 'admin').map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               </div>
 
@@ -314,7 +320,7 @@ export default function ProjectTab({ onUpdate }) {
                           />
                           <div className="flex gap-2">
                             <input 
-                              type="date" 
+                              type="date" min={today}
                               className="bg-white/50 border-none rounded-lg px-2 py-1 text-[10px] focus:ring-1 focus:ring-purple-400 flex-1"
                               value={m.due_date}
                               onChange={e => updateMilestone(idx, 'due_date', e.target.value)}
